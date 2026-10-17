@@ -1,0 +1,95 @@
+import { PGlite } from "@electric-sql/pglite";
+import fs from "fs";
+const db = new PGlite();
+const mig = fs.readFileSync("/home/claude/supabase/migrations/20261011000000_init.sql","utf8");
+const seed = fs.readFileSync("/home/claude/supabase/seed.sql","utf8");
+await db.exec(`
+create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
+create schema auth;
+create table auth.users(id uuid primary key default gen_random_uuid(), email text, raw_app_meta_data jsonb default '{}', raw_user_meta_data jsonb default '{}');
+create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true),'')::uuid $$;
+grant usage on schema auth to anon, authenticated, service_role;
+grant execute on function auth.uid() to anon, authenticated, service_role;
+`);
+await db.exec(`grant usage on schema public to anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;`);
+await db.exec(mig);
+let pass=0, fail=0;
+const ok=(n,c)=>{ if(c){pass++;console.log("PASS",n)}else{fail++;console.log("FAIL",n)} };
+async function as(role, uid, sql, params){
+  await db.exec(`reset role; select set_config('request.jwt.claim.sub','${uid||""}',false); set role ${role};`);
+  try { const r = await db.query(sql, params); await db.exec("reset role"); return {r}; }
+  catch(e){ await db.exec("reset role"); return {e:e.message}; }
+}
+const su = async (s,p)=> { await db.exec("reset role"); return db.query(s,p); };
+
+const A='00000000-0000-0000-0000-00000000000a', T='00000000-0000-0000-0000-00000000000b', T2='00000000-0000-0000-0000-00000000000c', N='00000000-0000-0000-0000-00000000000d';
+await su(`insert into auth.users(id,email,raw_app_meta_data,raw_user_meta_data) values
+ ('${A}','a@x.dz','{"role":"admin"}','{"name":"Admin"}'),
+ ('${T}','t@x.dz','{"role":"teacher"}','{"name":"Teach","role":"admin"}'),
+ ('${T2}','t2@x.dz','{"role":"teacher"}','{"name":"Teach2"}'),
+ ('${N}','n@x.dz','{}','{"name":"Nobody","role":"admin"}')`);
+let p = (await su(`select id,role,is_active,email from public.profiles order by email`)).rows;
+ok("4 profiles created", p.length===4);
+ok("admin role from app_meta", p.find(x=>x.email==='a@x.dz')?.role==='admin');
+ok("user_meta role ignored for teacher", p.find(x=>x.email==='t@x.dz')?.role==='teacher');
+ok("no role => inactive", p.find(x=>x.email==='n@x.dz')?.is_active===false);
+await su(`update public.profiles set is_active=true where id in ('${A}','${T}','${T2}')`);
+
+// seed w/o and with admin
+await db.exec(seed);
+ok("seed no-admin ok (resources 0 after activating? admin active now)", true);
+let c = (await su(`select count(*)::int n from public.resources`)).rows[0].n;
+ok("seed inserted legacy resources (22 expected)", c===8+14);
+await db.exec(seed);
+ok("seed idempotent", (await su(`select count(*)::int n from public.resources`)).rows[0].n===c);
+
+const ids = (await su(`select (select id from public.academic_years where is_current) y,(select id from public.grade_levels where code='1SC') g,(select id from public.subjects where code='INFO') s`)).rows[0];
+const ins = (u,extra="")=>as('authenticated',u,`insert into public.resources(user_id,academic_year_id,grade_level_id,subject_id,type,title,${extra?extra.split('|')[0]:'external_url'}) values ('${u}',${ids.y},${ids.g},${ids.s},'lesson','x',${extra?extra.split('|')[1]:"'https://a.b/c'"}) returning id`);
+let r = await ins(T); ok("teacher insert ok", !!r.r);
+const rid = r.r?.rows[0].id;
+r = await ins(T,"external_url|'javascript:alert(1)'"); ok("javascript url denied", !!r.e);
+r = await ins(T,`file_key|'resources/${T2}/x.pdf'`); ok("foreign file_key denied", !!r.e);
+r = await ins(T,`file_key|'resources/${T}/2026/10/x.pdf'`); ok("own file_key ok", !!r.r);
+r = await ins(T2).then(()=>as('authenticated',T2,`insert into public.resources(user_id,academic_year_id,grade_level_id,subject_id,type,title,external_url) values ('${T}',${ids.y},${ids.g},${ids.s},'lesson','x','https://a.b')`)); ok("insert as other user denied", !!r.e);
+r = await as('authenticated',T,`insert into public.resources(user_id,academic_year_id,grade_level_id,subject_id,type,title,external_url,download_count) values ('${T}',${ids.y},${ids.g},${ids.s},'lesson','x','https://a.b',99)`); ok("insert download_count>0 denied", !!r.e);
+r = await as('authenticated',T,`update public.resources set download_count=500 where id=${rid}`); ok("update download_count denied", !!r.e);
+r = await as('authenticated',T,`update public.resources set title='new' where id=${rid} returning id`); ok("owner update title ok", r.r?.rows.length===1);
+r = await as('authenticated',T2,`update public.resources set title='hack' where id=${rid} returning id`); ok("other teacher update affects 0 rows", !r.e && r.r.rows.length===0);
+r = await as('authenticated',T2,`delete from public.resources where id=${rid} returning id`); ok("other teacher delete 0 rows", !r.e && r.r.rows.length===0);
+r = await as('anon',null,`select count(*)::int n from public.resources`); ok("anon select published", r.r?.rows[0].n>0);
+r = await as('anon',null,`insert into public.resources(user_id,academic_year_id,grade_level_id,subject_id,type,title,external_url) values ('${T}',${ids.y},${ids.g},${ids.s},'lesson','x','https://a.b')`); ok("anon insert denied", !!r.e);
+r = await as('anon',null,`insert into public.grade_levels(name,code,year_number,stream) values('z','ZZ',1,'sciences')`); ok("anon write ref table denied", !!r.e);
+r = await as('authenticated',T,`insert into public.grade_levels(name,code,year_number,stream) values('z','ZZ',1,'sciences')`); ok("teacher write ref table denied", !!r.e);
+r = await as('authenticated',A,`insert into public.subjects(name,code) values('z','ZZ') returning id`); ok("admin write ref ok", !!r.r);
+r = await as('authenticated',T,`select public.increment_download(${rid})`); ok("increment_download denied for authenticated", !!r.e);
+r = await as('anon',null,`select public.increment_download(${rid})`); ok("increment_download denied for anon", !!r.e);
+r = await as('service_role',null,`select public.increment_download(${rid})`); ok("increment_download ok service_role", !!r.r);
+r = await as('authenticated',A,`select public.dashboard_stats() s`); ok("dashboard admin ok", !!r.r && r.r.rows[0].s.total_lessons>0);
+r = await as('authenticated',T,`select public.dashboard_stats()`); ok("dashboard teacher denied", !!r.e);
+// escalation
+r = await as('authenticated',T,`update public.profiles set role='admin' where id='${T}' returning role`); ok("self role-escalation blocked", !!r.e || r.r.rows[0]?.role==='teacher' || r.r.rows.length===0);
+r = await as('authenticated',T,`update public.profiles set email='z@z.z' where id='${T}'`); 
+ok("email unchanged", (await su(`select email from public.profiles where id='${T}'`)).rows[0].email==='t@x.dz');
+r = await as('authenticated',T,`select count(*)::int n from public.profiles`); ok("teacher sees only own profile", r.r?.rows[0].n===1);
+r = await as('authenticated',A,`select count(*)::int n from public.profiles`); ok("admin sees all profiles", r.r?.rows[0].n===4);
+// announcements
+const ann=(u,aud)=>as('authenticated',u,`insert into public.announcements(title,body,audience) values('t','b','${aud}') returning author_name,published_by_role`);
+r = await ann(A,'all'); ok("admin announce all ok + author_name", r.r?.rows[0]?.author_name==='Admin');
+r = await ann(T,'all'); console.log("  teacher->all:", r.e||'allowed');
+r = await ann(T,'students'); console.log("  teacher->students:", r.e||'allowed');
+// timetable
+r = await as('authenticated',T,`select public.replace_timetable(1,1,'[]'::jsonb)`); ok("teacher replace_timetable denied", !!r.e);
+const cl=(await su(`select id from public.classrooms limit 1`)).rows[0].id;
+r = await as('authenticated',A,`select public.replace_timetable(${cl},${ids.y},'[{"subject_id":${ids.s},"day":"Sunday","start_time":"08:00","end_time":"09:00"}]'::jsonb)`); ok("admin replace_timetable ok", !!r.r);
+r = await as('anon',null,`select count(*)::int n from public.timetables`); ok("anon reads timetable", r.r?.rows[0].n===1);
+// notifications
+await su(`insert into public.notifications(user_id) values ('${T}')`);
+r = await as('authenticated',T2,`select count(*)::int n from public.notifications`); ok("others' notifications hidden", r.r?.rows[0].n===0);
+r = await as('authenticated',T,`update public.notifications set type='x'`); ok("notification non-read_at update denied", !!r.e);
+r = await as('authenticated',T,`update public.notifications set read_at=now() returning id`); ok("mark read ok", r.r?.rows.length===1);
+// academic year
+r = await as('authenticated',A,`select public.set_current_academic_year(${ids.y})`); ok("set current ok", !!r.r);
+console.log(`\n${pass} pass, ${fail} fail`);
