@@ -19,7 +19,7 @@ export default function Footer() {
             </p>
           </div>
 
-          <div className="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay="100">
+          <div className="col-lg-3 col-md-7" data-aos="fade-up" data-aos-delay="100">
             <h6 className="fw-bold text-uppercase small mb-3 text-white-50">
               روابط سريعة
             </h6>
