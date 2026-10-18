@@ -2,15 +2,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { SCHOOL_NAME } from "../Data/constants";
-
-// ── Axios instance ────────────────────────────────────────────
-const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1",
-  headers: { "Content-Type": "application/json" },
-  withCredentials: false,
-});
+import { login } from "../api/services";
 
 // ── Animation variants ────────────────────────────────────────
 const inputVariants = {
@@ -97,46 +90,18 @@ export default function AuthPage() {
     setLoading(true);
     setError("");
 
-    try {
-      const { data } = await api.post("/auth/login", {
-        email:    form.email.trim(),
-        password: form.password,
-      });
-
-      // حفظ التوكن وبيانات المستخدم
-      localStorage.setItem("auth_token", data.token);
-      localStorage.setItem("auth_user",  JSON.stringify(data.user));
+       try {
+      const user = await login(form.email.trim(), form.password);
 
       setSuccess(true);
 
-      // توجيه حسب الدور — عدّلها لاحقاً حسب الروابط الحقيقية
       setTimeout(() => {
-        const role = data.user?.role;
-        if (role === "admin") {
-          navigate("/Admin");
-        } else if (role === "teacher") {
-          navigate("/teacher");
-        } else {
-          navigate("/");
-        }
+        if (user.role === "admin") navigate("/admin");
+        else if (user.role === "teacher") navigate("/teacher");
+        else navigate("/");
       }, 1200);
-
     } catch (err) {
-      const status  = err.response?.status;
-      const message = err.response?.data?.message;
-
-      if (status === 422) {
-        // بيانات خاطئة — email أو password
-        setError("البريد الإلكتروني أو كلمة المرور غير صحيحة.");
-      } else if (status === 403) {
-        // حساب معطّل
-        setError(message || "الحساب معطّل. تواصل مع المدير.");
-      } else if (!err.response) {
-        // لا يوجد اتصال بالسيرفر
-        setError("تعذّر الاتصال بالخادم. تحقق من اتصالك بالإنترنت.");
-      } else {
-        setError(message || "حدث خطأ غير متوقع. حاول مرة أخرى.");
-      }
+      setError(err.message || "حدث خطأ غير متوقع. حاول مرة أخرى.");
     } finally {
       setLoading(false);
     }

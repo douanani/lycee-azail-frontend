@@ -3,12 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { SCHOOL_NAME } from "../Data/constants";
 import { BI } from "../Utils/icons";
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1",
-  headers: { "Content-Type": "application/json" },
-});
+import { logout, getCurrentProfile } from "../api/services";
 
 function getDashboardPath(role) {
   const paths = {
@@ -425,6 +420,15 @@ export default function Navbar() {
     return () => window.removeEventListener("storage", sync);
   }, [location]);
 
+    useEffect(() => {
+    getCurrentProfile().then((p) => {
+      if (!p) {
+        try { localStorage.removeItem("auth_user"); } catch {}
+        setUser(null);
+      }
+    });
+  }, [location.pathname]);
+
   useEffect(() => {
     setDropdownOpen(false);
     setMorePanelOpen(false);
@@ -447,24 +451,18 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const handleLogout = async () => {
+   const handleLogout = async () => {
     setLoggingOut(true);
     setDropdownOpen(false);
-    setMorePanelOpen(false);
     try {
-      const token = localStorage.getItem("auth_token");
-      if (token)
-        await api.post("/auth/logout", {}, { headers: { Authorization: `Bearer ${token}` } });
+      await logout();
     } catch {}
     finally {
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("auth_user");
       setUser(null);
       setLoggingOut(false);
       navigate("/");
     }
   };
-
   const isActive = (path, id) =>
     location.pathname === path ||
     (id === "dashboard" && location.pathname.startsWith(path));
