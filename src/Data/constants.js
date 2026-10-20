@@ -1,7 +1,7 @@
 // data/constants.js
 export const SCHOOL_NAME = "ثانوية حاج بن جعفر ";
-export const SCHOOL_WILAYA = "ولاية وهران";
-export const SCHOOL_YEAR = "2025 / 2026";
+export const SCHOOL_WILAYA = "ولاية تلمسان";
+export const SCHOOL_YEAR = "2027 / 2026";
 
 export const NAV_LINKS = [
   { id: "home", label: "الرئيسية", icon: "bi-building" },

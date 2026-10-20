@@ -68,7 +68,7 @@ export default function Footer() {
         <hr className="my-4 bg-secondary" />
 
         <div className="text-center text-white-50 small">
-          Designed and Developed by Djilali Ouanani All rights reserved ©
+          Designed and Developed by Djilali Ouanani ©
         </div>
       </div>
     </footer>
