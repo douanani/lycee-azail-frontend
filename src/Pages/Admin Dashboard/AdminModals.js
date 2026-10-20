@@ -111,6 +111,7 @@ export function AddResourceModal({
   resourceForm, setResForm,
   handleUploadResource,
   submitting,
+  uploadPct,
   gradeLevels,
   subjects,
   academicYears,
@@ -225,7 +226,7 @@ export function AddResourceModal({
         <button className="modal-btn cancel" onClick={onClose}>إلغاء</button>
         <button className="modal-btn submit" onClick={handleUploadResource} disabled={submitting}>
           {submitting ? <span className="btn-spinner" /> : <i className="bi bi-cloud-upload-fill me-2"></i>}
-          رفع
+          {uploadPct != null ? `جارٍ الرفع ${uploadPct}%` : "رفع"}
         </button>
       </div>
     </AdminModal>

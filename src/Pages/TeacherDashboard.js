@@ -2,29 +2,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-
-// ─── Axios ────────────────────────────────────────────────────────────────────
-const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1",
-  headers: { "Content-Type": "application/json" },
-});
-api.interceptors.request.use((cfg) => {
-  const token = localStorage.getItem("auth_token");
-  if (token) cfg.headers.Authorization = `Bearer ${token}`;
-  return cfg;
-});
-api.interceptors.response.use(
-  (r) => r,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("auth_user");
-      window.location.href = "/auth";
-    }
-    return Promise.reject(err);
-  }
-);
+import {
+  getResources, uploadResource, deleteResource, downloadResource,
+  getAnnouncements, getGradeLevels, getSubjects, getAcademicYears,
+  getNotifications, markNotificationRead, markAllNotificationsRead,
+  logout, errMsg,
+} from "../api/services";
+import useAuthGuard from "../api/useAuthGuard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const typeConfig = {
@@ -98,9 +82,7 @@ export default function TeacherDashboard() {
   const navigate = useNavigate();
 
   // ── auth user ──────────────────────────────────────────────────────────────
-  const teacher = (() => {
-    try { return JSON.parse(localStorage.getItem("auth_user")); } catch { return null; }
-  })();
+  const teacher = useAuthGuard(["teacher", "admin"]);
 
   // ── UI ─────────────────────────────────────────────────────────────────────
   const [active, setActive]       = useState("overview");
@@ -139,22 +121,21 @@ export default function TeacherDashboard() {
   const fetchMyResources = useCallback(async () => {
     setLoad("res", true);
     try {
-      const params = {};
-      if (typeFilter !== "all") params.type = typeFilter;
-      if (searchQuery) params.search = searchQuery;
-      const { data } = await api.get("/resources", { params });
-      // نفلتر على user_id ديال الأستاذ
-      const list = (data.data || data).filter(r => r.user_id === teacher?.id || r.uploader?.id === teacher?.id);
-      setMyRes(list);
+      const { data } = await getResources({
+        mine: true,
+        type: typeFilter !== "all" ? typeFilter : undefined,
+        search: searchQuery || undefined,
+        perPage: 200,
+      });
+      setMyRes(data);
     } catch { showToast("تعذّر تحميل الملفات", "error"); }
     finally { setLoad("res", false); }
-  }, [typeFilter, searchQuery, teacher?.id]);
+  }, [typeFilter, searchQuery]);
 
   const fetchAnnouncements = useCallback(async () => {
     setLoad("anns", true);
     try {
-      const { data } = await api.get("/announcements");
-      setAnns(data.data || data);
+      setAnns(await getAnnouncements());
     } catch { showToast("تعذّر تحميل الإعلانات", "error"); }
     finally { setLoad("anns", false); }
   }, []);
@@ -162,14 +143,12 @@ export default function TeacherDashboard() {
   const fetchFormData = useCallback(async () => {
     try {
       const [lvls, subjs, years] = await Promise.all([
-        api.get("/grade-levels"),
-        api.get("/subjects"),
-        api.get("/academic-years"),
+        getGradeLevels(), getSubjects(), getAcademicYears(),
       ]);
-      setLevels(lvls.data);
-      setSubjects(subjs.data);
-      setYears(years.data);
-      const cur = years.data.find(y => y.is_current);
+      setLevels(lvls);
+      setSubjects(subjs);
+      setYears(years);
+      const cur = years.find(y => y.is_current);
       if (cur) setForm(p => ({ ...p, academic_year_id: cur.id }));
     } catch { /* silent */ }
   }, []);
@@ -177,16 +156,14 @@ export default function TeacherDashboard() {
   const fetchProfile = useCallback(async () => {
     setLoad("profile", true);
     try {
-      const { data } = await api.get("/auth/me");
-      setProfile(data);
+      setProfile(teacher);
     } catch { showToast("تعذّر تحميل البيانات الشخصية", "error"); }
     finally { setLoad("profile", false); }
-  }, []);
+  }, [teacher]);
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const { data } = await api.get("/notifications");
-      setNotifs(Array.isArray(data) ? data : []);
+      setNotifs(await getNotifications());
     } catch { /* silent */ }
   }, []);
 
@@ -215,16 +192,13 @@ export default function TeacherDashboard() {
     }
     setSub(true);
     try {
-      const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v); });
-      await api.post("/resources", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      const { file, ...meta } = form;
+      await uploadResource({ file, meta });
       showToast("✅ تم رفع الملف بنجاح");
       setForm(p => ({ ...p, title: "", description: "", file: null }));
       setActive("myresources");
     } catch (err) {
-      const msg = err.response?.data?.message ||
-        Object.values(err.response?.data?.errors || {})?.[0]?.[0];
-      showToast(msg || "فشل رفع الملف", "error");
+      showToast(errMsg(err, "فشل رفع الملف"), "error");
     } finally { setSub(false); }
   };
 
@@ -232,25 +206,25 @@ export default function TeacherDashboard() {
   const handleDelete = async (id) => {
     if (!window.confirm("تأكيد حذف هذا الملف؟")) return;
     try {
-      await api.delete(`/resources/${id}`);
+      await deleteResource(id);
       showToast("تم حذف الملف بنجاح");
       fetchMyResources();
     } catch (err) {
-      showToast(err.response?.data?.message || "فشل الحذف", "error");
+      showToast(errMsg(err, "فشل الحذف"), "error");
     }
   };
 
   // ── mark notification read ─────────────────────────────────────────────────
   const markRead = async (id) => {
     try {
-      await api.post(`/notifications/${id}/read`);
+      await markNotificationRead(id);
       setNotifs(p => p.filter(n => n.id !== id));
     } catch { /* silent */ }
   };
 
   const markAllRead = async () => {
     try {
-      await api.post("/notifications/read-all");
+      await markAllNotificationsRead();
       setNotifs([]);
     } catch { /* silent */ }
   };
@@ -265,6 +239,8 @@ export default function TeacherDashboard() {
   };
 
   const unreadCount = notifications.length;
+
+  if (!teacher) return null; // auth guard is checking / redirecting
 
   return (
     <div className="td-root" dir="rtl">
@@ -353,7 +329,7 @@ export default function TeacherDashboard() {
         <div className="td-topbar">
           <div>
             <h4 className="td-topbar-title">{NAV.find(n => n.id === active)?.label}</h4>
-            <p className="td-topbar-sub">السنة الدراسية 2025/2026</p>
+            <p className="td-topbar-sub">السنة الدراسية {academicYears.find(y => y.is_current)?.label || ""}</p>
           </div>
           <div className="td-topbar-actions">
             {/* notifications bell */}
@@ -368,9 +344,7 @@ export default function TeacherDashboard() {
             </button>
             {/* logout */}
             <button className="td-icon-btn logout-btn" title="تسجيل الخروج" onClick={async () => {
-              try { await api.post("/auth/logout"); } catch {}
-              localStorage.removeItem("auth_token");
-              localStorage.removeItem("auth_user");
+              await logout();
               navigate("/auth");
             }}>
               <i className="bi bi-box-arrow-right" />
@@ -464,9 +438,9 @@ export default function TeacherDashboard() {
                             </span>
                           </div>
                           <div className="td-res-actions">
-                            <a href={r.file_url} target="_blank" rel="noreferrer" className="td-row-btn view">
+                            <button className="td-row-btn view" onClick={() => downloadResource(r.id).catch(e => showToast(errMsg(e), "error"))}>
                               <i className="bi bi-eye-fill" />
-                            </a>
+                            </button>
                             <button className="td-row-btn del" onClick={() => handleDelete(r.id)}>
                               <i className="bi bi-trash3-fill" />
                             </button>
@@ -571,9 +545,9 @@ export default function TeacherDashboard() {
                           </p>
                         </div>
                         <div className="td-res-card-foot">
-                          <a href={r.file_url} target="_blank" rel="noreferrer" className="td-card-btn view">
+                          <button className="td-card-btn view" onClick={() => downloadResource(r.id).catch(e => showToast(errMsg(e), "error"))}>
                             <i className="bi bi-eye-fill me-1" />فتح
-                          </a>
+                          </button>
                           <button className="td-card-btn del" onClick={() => handleDelete(r.id)}>
                             <i className="bi bi-trash3-fill" />
                           </button>

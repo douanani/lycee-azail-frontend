@@ -2,8 +2,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
 
-// ─── Utils & Shared ────────────────────────────────────────────────────────────
-import { api } from "./adminUtils";
+// ─── Data layer (Supabase) ─────────────────────────────────────────────────────
+import {
+  getDashboard, getUsers, createUser, deleteUser, setUserActive,
+  getAnnouncements, createAnnouncement, deleteAnnouncement,
+  getResources, uploadResource, deleteResource,
+  getGradeLevels, getSubjects, getAcademicYears, errMsg,
+} from "../../api/services";
+import useAuthGuard from "../../api/useAuthGuard";
 
 // ─── Layout components ─────────────────────────────────────────────────────────
 import AdminSidebar from "./AdminSidebar";
@@ -25,6 +31,8 @@ import { motion } from "framer-motion";
 
 // ══════════════════════════════════════════════════════════════════════════════
 export default function AdminDashboard() {
+  const adminUser = useAuthGuard(["admin"]);
+
   // ── UI state ──────────────────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarOpen, setSidebarOpen]     = useState(true);
@@ -45,6 +53,7 @@ export default function AdminDashboard() {
   // ── Loading / submitting ──────────────────────────────────────────────────
   const [loading, setLoading]       = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [uploadPct, setUploadPct]   = useState(null);
 
   // ── Filters ───────────────────────────────────────────────────────────────
   const [userFilter, setUserFilter]         = useState("all");
@@ -62,116 +71,114 @@ export default function AdminDashboard() {
     academic_year_id: "", semester: "الفصل الأول", file: null
   });
 
-  const adminUser = (() => {
-    try { return JSON.parse(localStorage.getItem("auth_user")); } catch { return null; }
-  })();
-
   // ── Helpers ───────────────────────────────────────────────────────────────
-  const showToast = (msg, type = "success") => {
+  const showToast = useCallback((msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
-  };
+  }, []);
   const setLoad = (key, val) => setLoading(prev => ({ ...prev, [key]: val }));
 
   // ── Fetch helpers ─────────────────────────────────────────────────────────
   const fetchDashboard = useCallback(async () => {
     setLoad("dashboard", true);
     try {
-      const { data } = await api.get("/dashboard");
+      const data = await getDashboard();
       setStats(data.stats);
       setRecentRes(data.recent_resources || []);
       setTopDl(data.top_downloaded || []);
     } catch { showToast("تعذّر تحميل إحصائيات لوحة التحكم", "error"); }
     finally { setLoad("dashboard", false); }
-  }, []);
+  }, [showToast]);
 
   const fetchUsers = useCallback(async () => {
     setLoad("users", true);
     try {
-      const params = userFilter !== "all" ? { role: userFilter } : {};
-      const { data } = await api.get("/users", { params });
-      setUsers(data.data || data);
+      const { data } = await getUsers({ role: userFilter !== "all" ? userFilter : undefined, perPage: 200 });
+      setUsers(data);
     } catch { showToast("تعذّر تحميل المستخدمين", "error"); }
     finally { setLoad("users", false); }
-  }, [userFilter]);
+  }, [userFilter, showToast]);
 
   const fetchAnnouncements = useCallback(async () => {
     setLoad("announcements", true);
     try {
-      const { data } = await api.get("/announcements");
-      setAnnouncements(data.data || data);
+      setAnnouncements(await getAnnouncements());
     } catch { showToast("تعذّر تحميل الإعلانات", "error"); }
     finally { setLoad("announcements", false); }
-  }, []);
+  }, [showToast]);
 
   const fetchResources = useCallback(async () => {
     setLoad("resources", true);
     try {
-      const params = resourceFilter !== "all" ? { type: resourceFilter } : {};
-      const { data } = await api.get("/resources", { params });
-      setResources(data.data || data);
+      const { data } = await getResources({
+        type: resourceFilter !== "all" ? resourceFilter : undefined,
+        perPage: 200,
+      });
+      setResources(data);
     } catch { showToast("تعذّر تحميل الموارد", "error"); }
     finally { setLoad("resources", false); }
-  }, [resourceFilter]);
+  }, [resourceFilter, showToast]);
 
   const fetchFormData = useCallback(async () => {
     try {
       const [lvls, subjs, years] = await Promise.all([
-        api.get("/grade-levels"),
-        api.get("/subjects"),
-        api.get("/academic-years"),
+        getGradeLevels(), getSubjects(), getAcademicYears(),
       ]);
-      setGradeLevels(lvls.data);
-      setSubjects(subjs.data);
-      setAcadYears(years.data);
-      const current = years.data.find(y => y.is_current);
+      setGradeLevels(lvls);
+      setSubjects(subjs);
+      setAcadYears(years);
+      const current = years.find(y => y.is_current);
       if (current) setResForm(p => ({ ...p, academic_year_id: current.id }));
     } catch { /* silent */ }
   }, []);
 
-  // ── Initial load & reactive fetches ──────────────────────────────────────
+  // ── Initial load & reactive fetches (each fetch re-creates when its filter changes) ──
   useEffect(() => { fetchDashboard(); fetchFormData(); }, [fetchDashboard, fetchFormData]);
   useEffect(() => { if (activeSection === "users")         fetchUsers(); },         [activeSection, fetchUsers]);
   useEffect(() => { if (activeSection === "announcements") fetchAnnouncements(); }, [activeSection, fetchAnnouncements]);
   useEffect(() => { if (activeSection === "resources")     fetchResources(); },     [activeSection, fetchResources]);
-  useEffect(() => { if (activeSection === "resources")     fetchResources(); },     [resourceFilter]); // eslint-disable-line
-  useEffect(() => { if (activeSection === "users")         fetchUsers(); },         [userFilter]);      // eslint-disable-line
 
   // ── Actions ───────────────────────────────────────────────────────────────
   const handleAddUser = async () => {
     if (!userForm.name || !userForm.email || !userForm.password) {
       showToast("يرجى ملء جميع الحقول المطلوبة", "error"); return;
     }
+    if (userForm.password.length < 8) {
+      showToast("كلمة المرور 8 أحرف على الأقل", "error"); return;
+    }
     setSubmitting(true);
     try {
-      const roleId = ["admin","teacher","counselor","admin_staff","supervisor"].indexOf(userForm.role) + 1;
-      await api.post("/users", { ...userForm, password_confirmation: userForm.password, role_id: roleId });
+      await createUser({
+        name: userForm.name, email: userForm.email,
+        password: userForm.password, role: userForm.role,
+      });
       showToast("تم إضافة المستخدم بنجاح");
       setModal(null);
       setUserForm({ name: "", email: "", role: "teacher", password: "", password_confirmation: "" });
       fetchUsers();
+      fetchDashboard();
     } catch (err) {
-      const msg = err.response?.data?.message || Object.values(err.response?.data?.errors || {})?.[0]?.[0];
-      showToast(msg || "فشل إضافة المستخدم", "error");
+      showToast(errMsg(err, "فشل إضافة المستخدم"), "error");
     } finally { setSubmitting(false); }
   };
 
   const handleToggleUser = async (user) => {
     try {
-      await api.post(`/users/${user.id}/toggle-active`);
+      await setUserActive(user.id, !user.is_active);
       showToast(`تم ${user.is_active ? "تعطيل" : "تفعيل"} حساب ${user.name}`);
       fetchUsers();
-    } catch { showToast("فشلت العملية", "error"); }
+    } catch (err) { showToast(errMsg(err, "فشلت العملية"), "error"); }
   };
 
   const handleDeleteUser = async (user) => {
     if (!window.confirm(`هل تريد حذف ${user.name}؟`)) return;
     try {
-      await api.delete(`/users/${user.id}`);
+      await deleteUser(user.id);
       showToast("تم حذف المستخدم بنجاح");
       fetchUsers();
+      fetchDashboard();
     } catch (err) {
-      showToast(err.response?.data?.message || "فشل الحذف", "error");
+      showToast(errMsg(err, "فشل الحذف"), "error");
     }
   };
 
@@ -181,23 +188,24 @@ export default function AdminDashboard() {
     }
     setSubmitting(true);
     try {
-      await api.post("/announcements", announcementForm);
+      await createAnnouncement(announcementForm);
       showToast("تم نشر الإعلان بنجاح");
       setModal(null);
       setAnnForm({ title: "", body: "", audience: "all" });
       fetchAnnouncements();
+      fetchDashboard();
     } catch (err) {
-      showToast(err.response?.data?.message || "فشل النشر", "error");
+      showToast(errMsg(err, "فشل النشر"), "error");
     } finally { setSubmitting(false); }
   };
 
   const handleDeleteAnnouncement = async (id) => {
     if (!window.confirm("تأكيد حذف الإعلان؟")) return;
     try {
-      await api.delete(`/announcements/${id}`);
+      await deleteAnnouncement(id);
       showToast("تم حذف الإعلان");
       fetchAnnouncements();
-    } catch { showToast("فشل الحذف", "error"); }
+    } catch (err) { showToast(errMsg(err, "فشل الحذف"), "error"); }
   };
 
   const handleUploadResource = async () => {
@@ -205,30 +213,31 @@ export default function AdminDashboard() {
       showToast("يرجى ملء جميع الحقول وتحديد الملف", "error"); return;
     }
     setSubmitting(true);
+    setUploadPct(0);
     try {
-      const fd = new FormData();
-      Object.entries(resourceForm).forEach(([k, v]) => { if (v) fd.append(k, v); });
-      await api.post("/resources", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      const { file, ...meta } = resourceForm;
+      await uploadResource({ file, meta, onProgress: setUploadPct });
       showToast("تم رفع المورد بنجاح");
       setModal(null);
       setResForm(p => ({ ...p, title: "", file: null }));
       if (activeSection === "resources") fetchResources();
       fetchDashboard();
     } catch (err) {
-      const msg = err.response?.data?.message || Object.values(err.response?.data?.errors || {})?.[0]?.[0];
-      showToast(msg || "فشل الرفع", "error");
-    } finally { setSubmitting(false); }
+      showToast(errMsg(err, "فشل الرفع"), "error");
+    } finally { setSubmitting(false); setUploadPct(null); }
   };
 
   const handleDeleteResource = async (id) => {
     if (!window.confirm("تأكيد الحذف؟")) return;
     try {
-      await api.delete(`/resources/${id}`);
+      await deleteResource(id);
       showToast("تم الحذف بنجاح");
       fetchResources();
       fetchDashboard();
-    } catch { showToast("فشل الحذف", "error"); }
+    } catch (err) { showToast(errMsg(err, "فشل الحذف"), "error"); }
   };
+
+  if (!adminUser) return null; // guard is checking the session / redirecting
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -308,7 +317,7 @@ export default function AdminDashboard() {
             />
           )}
 
-          {activeSection === "timetable" && <TimetableSection />}
+          {activeSection === "timetable" && <TimetableSection showToast={showToast} />}
 
           {activeSection === "settings" && (
             <SettingsSection showToast={showToast} />
@@ -342,6 +351,7 @@ export default function AdminDashboard() {
         setResForm={setResForm}
         handleUploadResource={handleUploadResource}
         submitting={submitting}
+        uploadPct={uploadPct}
         gradeLevels={gradeLevels}
         subjects={subjects}
         academicYears={academicYears}

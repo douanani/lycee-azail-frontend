@@ -1,6 +1,7 @@
 // admin/AdminTopbar.js
 import { useNavigate } from "react-router-dom";
-import { api } from "./adminUtils";
+import { useEffect, useState } from "react";
+import { logout, getCurrentYear } from "../../api/services";
 
 const SIDEBAR_ITEMS = [
   { id: "overview",      label: "نظرة عامة" },
@@ -13,11 +14,11 @@ const SIDEBAR_ITEMS = [
 
 export default function AdminTopbar({ activeSection }) {
   const navigate = useNavigate();
+  const [yearLabel, setYearLabel] = useState("");
+  useEffect(() => { getCurrentYear().then(y => setYearLabel(y?.label || "")).catch(() => {}); }, []);
 
   const handleLogout = async () => {
-    try { await api.post("/auth/logout"); } catch {}
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_user");
+    await logout();
     navigate("/auth");
   };
 
@@ -35,7 +36,7 @@ export default function AdminTopbar({ activeSection }) {
       <div className="topbar-right">
         <div className="topbar-badge">
           <i className="bi bi-circle-fill text-success me-1" style={{ fontSize: "0.5rem" }}></i>
-          2025/2026
+          {yearLabel || "—"}
         </div>
         <button className="topbar-btn" onClick={() => navigate("/")}>
           <i className="bi bi-house-fill"></i>

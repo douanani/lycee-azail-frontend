@@ -1,29 +1,6 @@
 // admin/adminUtils.js
-import axios from "axios";
 import { useState, useEffect, useRef } from "react";
 
-
-// ─── Axios instance ────────────────────────────────────────────────────────────
-export const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1",
-  headers: { "Content-Type": "application/json" },
-});
-api.interceptors.request.use((cfg) => {
-  const token = localStorage.getItem("auth_token");
-  if (token) cfg.headers.Authorization = `Bearer ${token}`;
-  return cfg;
-});
-api.interceptors.response.use(
-  (r) => r,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("auth_user");
-      window.location.href = "/auth";
-    }
-    return Promise.reject(err);
-  }
-);
 
 // ─── Configs ───────────────────────────────────────────────────────────────────
 export const roleConfig = {

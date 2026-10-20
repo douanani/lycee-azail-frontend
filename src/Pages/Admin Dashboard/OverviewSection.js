@@ -1,6 +1,6 @@
 // admin/sections/OverviewSection.js
 import { motion } from "framer-motion";
-import { AnimatedNumber, Skeleton, typeConfig, api } from "./adminUtils";
+import { AnimatedNumber, Skeleton, typeConfig } from "./adminUtils";
 
 const fadeUp = { hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } };
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.07 } } };
@@ -22,7 +22,7 @@ export default function OverviewSection({
     { label: "الفروض",        value: stats.total_exams + stats.total_homework, icon: "bi-clipboard-data-fill", bg: "linear-gradient(135deg,#f59e0b,#d97706)" },
     { label: "التحميلات",     value: stats.total_downloads,     icon: "bi-download",              bg: "linear-gradient(135deg,#ef4444,#dc2626)" },
     { label: "الإعلانات",     value: stats.active_announcements,icon: "bi-megaphone-fill",        bg: "linear-gradient(135deg,#8b5cf6,#7c3aed)" },
-    { label: "السنة الدراسية",value: "2025/2026", icon: "bi-calendar-check-fill",                bg: "linear-gradient(135deg,#475569,#334155)", noCount: true },
+    { label: "السنة الدراسية",value: stats.current_year?.label || "—", icon: "bi-calendar-check-fill",                bg: "linear-gradient(135deg,#475569,#334155)", noCount: true },
   ] : [];
 
   return (

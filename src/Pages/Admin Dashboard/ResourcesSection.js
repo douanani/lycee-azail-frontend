@@ -1,6 +1,7 @@
 // admin/sections/ResourcesSection.js
 import { motion } from "framer-motion";
 import { Skeleton, typeConfig } from "./adminUtils";
+import { downloadResource } from "../../api/services";
 
 const fadeUp = { hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } };
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.07 } } };
@@ -79,15 +80,13 @@ export default function ResourcesSection({
                       <td>{r.uploader?.name || "—"}</td>
                       <td>{r.download_count || 0}</td>
                       <td className="td-actions">
-                        <a
-                          href={r.file_url}
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
                           className="tbl-action-btn view"
                           title="فتح"
+                          onClick={() => downloadResource(r.id).catch(() => {})}
                         >
                           <i className="bi bi-eye-fill"></i>
-                        </a>
+                        </button>
                         <button
                           className="tbl-action-btn delete"
                           onClick={() => handleDeleteResource(r.id)}

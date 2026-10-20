@@ -1,7 +1,8 @@
 // admin/sections/SettingsSection.js
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { api, Skeleton } from "../Admin Dashboard/adminUtils";
+import { motion } from "framer-motion";
+import { Skeleton } from "../Admin Dashboard/adminUtils";
+import * as svc from "../../api/services";
 import AdminModal from "./AdminModal";
 
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.05 } } };
@@ -33,28 +34,28 @@ export default function SettingsSection({ showToast }) {
 
   const fetchYears = useCallback(async () => {
     setLoad("years", true);
-    try { const { data } = await api.get("/academic-years"); setYears(data); }
+    try { setYears(await svc.getAcademicYears()); }
     catch { showToast("تعذّر تحميل السنوات الدراسية", "error"); }
     finally { setLoad("years", false); }
   }, [showToast]);
 
   const fetchLevels = useCallback(async () => {
     setLoad("levels", true);
-    try { const { data } = await api.get("/grade-levels"); setLevels(data); }
+    try { setLevels(await svc.getGradeLevels()); }
     catch { showToast("تعذّر تحميل المستويات", "error"); }
     finally { setLoad("levels", false); }
   }, [showToast]);
 
   const fetchSubjects = useCallback(async () => {
     setLoad("subjects", true);
-    try { const { data } = await api.get("/subjects"); setSubjects(data); }
+    try { setSubjects(await svc.getSubjectsAdmin()); }
     catch { showToast("تعذّر تحميل المواد", "error"); }
     finally { setLoad("subjects", false); }
   }, [showToast]);
 
   const fetchClassrooms = useCallback(async () => {
     setLoad("classrooms", true);
-    try { const { data } = await api.get("/classrooms"); setClassrooms(data); }
+    try { setClassrooms(await svc.getClassrooms()); }
     catch { showToast("تعذّر تحميل الأقسام", "error"); }
     finally { setLoad("classrooms", false); }
   }, [showToast]);
@@ -72,8 +73,7 @@ export default function SettingsSection({ showToast }) {
   }, [tab]);
 
   const closeModal = () => setModal(null);
-  const err = (e, fallback) =>
-    e.response?.data?.message || Object.values(e.response?.data?.errors || {})?.[0]?.[0] || fallback;
+  const err = (e, fallback) => svc.errMsg(e, fallback);
 
   /* ══════════ ACADEMIC YEARS ══════════ */
   const [yearForm, setYearForm] = useState({ label: "", start_date: "", end_date: "", is_current: false });
@@ -84,7 +84,7 @@ export default function SettingsSection({ showToast }) {
     }
     setSubmitting(true);
     try {
-      await api.post("/academic-years", yearForm);
+      await svc.createAcademicYear(yearForm);
       showToast("تمت إضافة السنة الدراسية");
       closeModal();
       setYearForm({ label: "", start_date: "", end_date: "", is_current: false });
@@ -95,7 +95,7 @@ export default function SettingsSection({ showToast }) {
 
   const setCurrentYear = async (year) => {
     try {
-      await api.post(`/academic-years/${year.id}/set-current`);
+      await svc.setCurrentAcademicYear(year.id);
       showToast(`تم تعيين ${year.label} كسنة دراسية حالية`);
       fetchYears();
     } catch (e) { showToast(err(e, "فشلت العملية"), "error"); }
@@ -123,10 +123,7 @@ export default function SettingsSection({ showToast }) {
     if (!levelForm.name || !levelForm.code) { showToast("يرجى ملء الاسم والرمز", "error"); return; }
     setSubmitting(true);
     try {
-      const payload = { ...levelForm };
-      delete payload.id;
-      if (levelForm.id) await api.put(`/grade-levels/${levelForm.id}`, payload);
-      else await api.post("/grade-levels", payload);
+      await svc.saveGradeLevel(levelForm);
       showToast(levelForm.id ? "تم تحديث المستوى" : "تمت إضافة المستوى");
       closeModal();
       fetchLevels();
@@ -137,7 +134,7 @@ export default function SettingsSection({ showToast }) {
   const deleteLevel = async (level) => {
     if (!window.confirm(`حذف "${level.name}"؟`)) return;
     try {
-      await api.delete(`/grade-levels/${level.id}`);
+      await svc.deleteGradeLevel(level.id);
       showToast("تم الحذف");
       fetchLevels();
     } catch (e) { showToast(err(e, "فشل الحذف"), "error"); }
@@ -152,15 +149,12 @@ export default function SettingsSection({ showToast }) {
       setModal({ type: "subject" });
       return;
     }
-    try {
-      const { data } = await api.get(`/subjects/${subject.id}`);
-      setSubjectForm({
-        id: data.id, name: data.name, name_fr: data.name_fr || "", code: data.code,
-        icon: data.icon || "", color: data.color || "#4f46e5",
-        grade_level_ids: (data.gradeLevels || []).map(l => l.id),
-      });
-      setModal({ type: "subject" });
-    } catch { showToast("تعذّر تحميل بيانات المادة", "error"); }
+    setSubjectForm({
+      id: subject.id, name: subject.name, name_fr: subject.name_fr || "", code: subject.code,
+      icon: subject.icon || "", color: subject.color || "#4f46e5",
+      grade_level_ids: subject.grade_level_ids || [],
+    });
+    setModal({ type: "subject" });
   };
 
   const toggleSubjectLevel = (id) =>
@@ -173,10 +167,7 @@ export default function SettingsSection({ showToast }) {
     if (!subjectForm.name || !subjectForm.code) { showToast("يرجى ملء الاسم والرمز", "error"); return; }
     setSubmitting(true);
     try {
-      const payload = { ...subjectForm };
-      delete payload.id;
-      if (subjectForm.id) await api.put(`/subjects/${subjectForm.id}`, payload);
-      else await api.post("/subjects", payload);
+      await svc.saveSubject(subjectForm);
       showToast(subjectForm.id ? "تم تحديث المادة" : "تمت إضافة المادة");
       closeModal();
       fetchSubjects();
@@ -187,7 +178,7 @@ export default function SettingsSection({ showToast }) {
   const deleteSubject = async (subject) => {
     if (!window.confirm(`حذف "${subject.name}"؟`)) return;
     try {
-      await api.delete(`/subjects/${subject.id}`);
+      await svc.deleteSubject(subject.id);
       showToast("تم الحذف");
       fetchSubjects();
     } catch (e) { showToast(err(e, "فشل الحذف"), "error"); }
@@ -210,10 +201,7 @@ export default function SettingsSection({ showToast }) {
     }
     setSubmitting(true);
     try {
-      const payload = { ...classForm };
-      delete payload.id;
-      if (classForm.id) await api.put(`/classrooms/${classForm.id}`, payload);
-      else await api.post("/classrooms", payload);
+      await svc.saveClassroom(classForm);
       showToast(classForm.id ? "تم تحديث القسم" : "تمت إضافة القسم");
       closeModal();
       fetchClassrooms();
@@ -224,7 +212,7 @@ export default function SettingsSection({ showToast }) {
   const deleteClassroom = async (cls) => {
     if (!window.confirm(`حذف "${cls.name}"؟`)) return;
     try {
-      await api.delete(`/classrooms/${cls.id}`);
+      await svc.deleteClassroom(cls.id);
       showToast("تم الحذف");
       fetchClassrooms();
     } catch (e) { showToast(err(e, "فشل الحذف"), "error"); }
@@ -235,8 +223,9 @@ export default function SettingsSection({ showToast }) {
   const downloadBackup = async () => {
     setDownloading(true);
     try {
-      const res = await api.get("/backup/export", { responseType: "blob" });
-      const url = window.URL.createObjectURL(res.data);
+      const backup = await svc.exportBackup();
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `lycee-azail-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -257,12 +246,15 @@ export default function SettingsSection({ showToast }) {
     if (!pwForm.current_password || !pwForm.password || !pwForm.password_confirmation) {
       showToast("يرجى ملء جميع الحقول", "error"); return;
     }
+    if (pwForm.password.length < 8) {
+      showToast("كلمة المرور 8 أحرف على الأقل", "error"); return;
+    }
     if (pwForm.password !== pwForm.password_confirmation) {
       showToast("كلمتا المرور غير متطابقتين", "error"); return;
     }
     setPwSubmitting(true);
     try {
-      await api.put("/auth/change-password", pwForm);
+      await svc.changePassword(pwForm.current_password, pwForm.password);
       showToast("تم تغيير كلمة المرور بنجاح");
       setPwForm({ current_password: "", password: "", password_confirmation: "" });
     } catch (e) { showToast(err(e, "فشل تغيير كلمة المرور"), "error"); }

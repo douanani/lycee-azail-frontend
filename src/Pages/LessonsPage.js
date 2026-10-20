@@ -3,21 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "../components/PageHeader";
 
-// ─── Axios instance (Bearer token) ────────────────────────────────────────────
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1",
-  headers: { "Content-Type": "application/json" },
-  withCredentials: false,
-});
-
-// Attach token automatically if stored
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("auth_token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+import { getGradeLevels, getResources, downloadResource, errMsg } from "../api/services";
 
 // ─── Animation variants ────────────────────────────────────────────────────────
 const fadeUp = {
@@ -159,8 +145,7 @@ export default function LessonsPage() {
     (async () => {
       try {
         setLoadingLevels(true);
-        const { data } = await api.get("/grade-levels");
-        const levels = Array.isArray(data) ? data : data.data ?? [];
+        const levels = await getGradeLevels();
         setGradeLevels(levels);
         if (levels.length > 0) setSelectedLevel(levels[0]);
       } catch (err) {
@@ -182,8 +167,7 @@ export default function LessonsPage() {
         setFiles([]);
 
         // The API returns grade level with its subjects via eager load
-        const { data } = await api.get(`/grade-levels/${selectedLevel.id}`);
-        const subs = data.subjects ?? [];
+        const subs = selectedLevel.subjects ?? [];
         setSubjects(subs);
         if (subs.length > 0) setSelectedSubject(subs[0]);
       } catch {
@@ -200,16 +184,15 @@ export default function LessonsPage() {
     try {
       setLoadingFiles(true);
       setError(null);
-      const params = {
+      const res = await getResources({
         type: "lesson",
-        grade_level_id: selectedLevel.id,
-        subject_id: selectedSubject.id,
+        gradeLevelId: selectedLevel.id,
+        subjectId: selectedSubject.id,
         page,
-        ...(debouncedSearch ? { search: debouncedSearch } : {}),
-      };
-      const { data } = await api.get("/resources", { params });
-      setFiles(data.data ?? []);
-      setMeta(data.meta ?? null);
+        search: debouncedSearch || undefined,
+      });
+      setFiles(res.data);
+      setMeta(res.meta);
     } catch {
       setError("تعذّر تحميل الدروس.");
     } finally {
@@ -637,17 +620,16 @@ export default function LessonsPage() {
                             )}
                           </div>
 
-                          <motion.a
-                            href={`${process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1"}/resources/${file.id}/download`}
+                          <motion.button
+                            type="button"
                             className="download-btn"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            onClick={() => downloadResource(file.id).catch((e) => setError(errMsg(e, "تعذّر تحميل الملف")))}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                           >
                             <i className="bi bi-download"></i>
                             <span>تحميل</span>
-                          </motion.a>
+                          </motion.button>
                         </div>
                       </motion.div>
                     ))}
@@ -903,6 +885,7 @@ export default function LessonsPage() {
           font-size: 0.8rem; color: #718096;
         }
         .download-btn {
+          border: none; cursor: pointer; font-family: inherit;
           display: flex; align-items: center; gap: 8px;
           padding: 10px 20px;
           background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);

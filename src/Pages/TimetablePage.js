@@ -2,19 +2,61 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "../components/PageHeader";
-import { TIMETABLE_DATA, HOURS, DAYS, SUBJECT_COLORS, SUBJECT_ICONS } from "../Data/constants";
+import { HOURS, DAYS, SUBJECT_COLORS, SUBJECT_ICONS } from "../Data/constants";
+import { getTimetableOverview } from "../api/services";
+
+const DAY_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+const pad = (t) => (t || "").substring(0, 5).padStart(5, "0");
+
+/** DB rows → { "قسم": { "الأحد": [8 subject names, "—" when empty] } } */
+function buildTimetable({ classrooms, slots }) {
+  const names = classrooms.map((c) => c.name);
+  const label = (c) => (names.filter((n) => n === c.name).length > 1 ? `${c.grade_level?.name || ""} ${c.name}`.trim() : c.name);
+  const hourIdx = Object.fromEntries(HOURS.map((h, i) => [pad(h), i]));
+  const out = {};
+  const icons = {};
+  const byId = {};
+  classrooms.forEach((c) => {
+    const grid = {};
+    DAYS.forEach((d) => { grid[d] = Array(HOURS.length).fill("—"); });
+    out[label(c)] = grid;
+    byId[c.id] = grid;
+  });
+  slots.forEach((sl) => {
+    const grid = byId[sl.classroom_id];
+    const di = DAY_EN.indexOf(sl.day);
+    const hi = hourIdx[pad(sl.start_time)];
+    if (!grid || di < 0 || hi === undefined || sl.is_break || !sl.subject) return;
+    grid[DAYS[di]][hi] = sl.subject.name;
+    if (sl.subject.icon) icons[sl.subject.name] = sl.subject.icon;
+  });
+  return { data: out, icons };
+}
 
 
 export default function TimetablePage() {
-  const classes = Object.keys(TIMETABLE_DATA);
-  const [selected, setSelected] = useState(classes[0]);
+  const [tt, setTt] = useState({ data: {}, icons: {}, year: null });
+  const [status, setStatus] = useState("loading"); // loading | ready | error
+  const classes = Object.keys(tt.data);
+  const [selected, setSelected] = useState(null);
   const [currentDay, setCurrentDay] = useState(null);
   const [viewMode, setViewMode] = useState("week"); // 'week' or 'day'
-  const grid = TIMETABLE_DATA[selected];
+  const grid = tt.data[selected] || {};
+
+  useEffect(() => {
+    getTimetableOverview()
+      .then((ov) => {
+        const built = buildTimetable(ov);
+        setTt({ ...built, year: ov.year });
+        setSelected(Object.keys(built.data)[0] || null);
+        setStatus("ready");
+      })
+      .catch(() => setStatus("error"));
+  }, []);
 
   // Get current day of week
   useEffect(() => {
-    const days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+    const days = DAYS;
     const today = new Date().getDay();
     if (today >= 0 && today <= 4) {
       setCurrentDay(days[today]);
@@ -22,7 +64,7 @@ export default function TimetablePage() {
   }, []);
 
   const getSubjectIcon = (subject) => {
-    return SUBJECT_ICONS[subject] || "bi-book-fill";
+    return SUBJECT_ICONS[subject] || tt.icons[subject] || "bi-book-fill";
   };
 
  // const getBadgeClass = (subject) => {
@@ -100,6 +142,19 @@ export default function TimetablePage() {
 
   const currentLesson = getCurrentLesson();
 
+  if (status !== "ready" || classes.length === 0) {
+    return (
+      <div>
+        <PageHeader icon="bi-calendar-week" title="استعمال الزمن" sub="جداول دراسية منظمة لجميع الأقسام" />
+        <div className="container py-5 text-center text-muted" dir="rtl">
+          {status === "loading" && "جارٍ التحميل..."}
+          {status === "error" && "تعذّر تحميل الجداول. حاول مرة أخرى لاحقاً."}
+          {status === "ready" && "لم يتم نشر أي جدول بعد."}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -110,7 +165,7 @@ export default function TimetablePage() {
       <PageHeader
         icon="bi-calendar-week"
         title="استعمال الزمن"
-        sub="جداول دراسية منظمة لجميع الأقسام — السنة الدراسية 2025/2026"
+        sub={`جداول دراسية منظمة لجميع الأقسام${tt.year ? " — السنة الدراسية " + tt.year.label : ""}`}
       />
 
       <div className="container py-4">

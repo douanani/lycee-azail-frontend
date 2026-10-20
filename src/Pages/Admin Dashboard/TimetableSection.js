@@ -1,7 +1,7 @@
 // admin/sections/TimetableSection.js
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { api } from "./adminUtils";
+import { getClassrooms, getSubjects, getTeachers, getAcademicYears, getTimetable, replaceTimetable, errMsg } from "../../api/services";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const DAYS = [
@@ -202,19 +202,16 @@ export default function TimetableSection({ showToast }) {
     (async () => {
       setLoadingMeta(true);
       try {
-        const [clsRes, subjRes, teachRes, yearRes] = await Promise.all([
-          api.get("/classrooms"),
-          api.get("/subjects"),
-          api.get("/users", { params: { role: "teacher" } }),
-          api.get("/academic-years"),
+        const [cls, subj, teach, years] = await Promise.all([
+          getClassrooms(), getSubjects(), getTeachers(), getAcademicYears(),
         ]);
-        setClassrooms(clsRes.data?.data || clsRes.data || []);
-        setSubjects(subjRes.data?.data || subjRes.data || []);
-        setTeachers(teachRes.data?.data || teachRes.data || []);
-        setAcadYears(yearRes.data?.data || yearRes.data || []);
+        setClassrooms(cls);
+        setSubjects(subj);
+        setTeachers(teach);
+        setAcadYears(years);
 
         // auto-select current year
-        const cur = (yearRes.data?.data || yearRes.data || []).find(y => y.is_current);
+        const cur = years.find(y => y.is_current);
         if (cur) setSelectedAcademicYear(String(cur.id));
       } catch {
         showToast("تعذّر تحميل البيانات الأساسية", "error");
@@ -231,18 +228,11 @@ export default function TimetableSection({ showToast }) {
     setPending({});
     setHasChanges(false);
     try {
-      const { data } = await api.get("/timetables", {
-        params: { classroom_id: selectedClassroom, academic_year_id: selectedAcademicYear },
-      });
-      // data is grouped by day: { Sunday: [...], Monday: [...] }
-      const flat = Object.values(data).flat();
+      const flat = await getTimetable(Number(selectedClassroom), Number(selectedAcademicYear));
       setSlots(flat);
       setGridMap(buildGridMap(flat));
     } catch (err) {
-      // 422 = no classroom found, treat as empty
-      if (err.response?.status !== 422) {
-        showToast("تعذّر تحميل جدول الحصص", "error");
-      }
+      showToast(errMsg(err, "تعذّر تحميل جدول الحصص"), "error");
       setSlots([]);
       setGridMap({});
     } finally {
@@ -328,20 +318,13 @@ export default function TimetableSection({ showToast }) {
         });
       });
 
-      await api.post("/timetables/bulk", {
-        classroom_id:     Number(selectedClassroom),
-        academic_year_id: Number(selectedAcademicYear),
-        slots:            finalSlots,
-      });
+      await replaceTimetable(Number(selectedClassroom), Number(selectedAcademicYear), finalSlots);
 
       showToast("✅ تم حفظ جدول الحصص بنجاح");
       setHasChanges(false);
       await fetchTimetable(); // reload fresh
     } catch (err) {
-      const msg = err.response?.data?.message
-        || Object.values(err.response?.data?.errors || {})?.[0]?.[0]
-        || "فشل حفظ الجدول";
-      showToast(msg, "error");
+      showToast(errMsg(err, "فشل حفظ الجدول"), "error");
     } finally {
       setSaving(false);
     }

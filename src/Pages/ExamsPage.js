@@ -1,8 +1,32 @@
 // pages/ExamsPage.js
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "../components/PageHeader";
-import { EXAMS } from "../Data/constants";
+import { getGradeLevels, getResources, downloadResource } from "../api/services";
+
+const fmtSize = (b) => {
+  if (!b) return "—";
+  if (b < 1024 * 1024) return `${Math.max(1, Math.round(b / 1024))} KB`;
+  return `${(b / 1024 / 1024).toFixed(1)} MB`;
+};
+
+/** DB rows → { levelName: { subjectName: [{id,name,size,type,date}] } } */
+function buildExams(levels, resources) {
+  const out = {};
+  const byKey = {};
+  levels.forEach((l) => {
+    out[l.name] = {};
+    (l.subjects || []).forEach((sub) => {
+      out[l.name][sub.name] = [];
+      byKey[`${l.id}|${sub.id}`] = out[l.name][sub.name];
+    });
+  });
+  resources.forEach((r) => {
+    const list = byKey[`${r.grade_level_id}|${r.subject_id}`];
+    if (list) list.push({ id: r.id, name: r.title, size: fmtSize(r.file_size), type: r.type, date: r.created_at?.substring(0, 10) });
+  });
+  return out;
+}
 
 // Enhanced animation variants
 const fadeUp = {
@@ -34,20 +58,39 @@ const staggerItem = {
 };
 
 export default function ExamsPage() {
-  const [selectedLevel, setSelectedLevel] = useState(Object.keys(EXAMS)[0]);
-  const [selectedSubject, setSelectedSubject] = useState(
-    Object.keys(EXAMS[Object.keys(EXAMS)[0]])[0],
-  );
+  const [exams, setExams] = useState({});
+  const [status, setStatus] = useState("loading"); // loading | ready | error
+  const [selectedLevel, setSelectedLevel] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState(null);
   const [examType, setExamType] = useState("all"); // 'all', 'exam', 'homework'
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("list"); // 'list' or 'grid'
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const [levels, res] = await Promise.all([
+          getGradeLevels(),
+          getResources({ types: ["exam", "homework"], perPage: 1000 }),
+        ]);
+        const built = buildExams(levels, res.data);
+        setExams(built);
+        const first = Object.keys(built)[0] || null;
+        setSelectedLevel(first);
+        setSelectedSubject(first ? Object.keys(built[first])[0] || null : null);
+        setStatus("ready");
+      } catch {
+        setStatus("error");
+      }
+    })();
+  }, []);
+
   const handleLevel = (lvl) => {
     setSelectedLevel(lvl);
-    setSelectedSubject(Object.keys(EXAMS[lvl])[0]);
+    setSelectedSubject(Object.keys(exams[lvl] || {})[0] || null);
   };
 
-  const subjects = EXAMS[selectedLevel] || {};
+  const subjects = exams[selectedLevel] || {};
   
   // Filter by exam type
   const filterByType = (files) => {
@@ -110,6 +153,19 @@ export default function ExamsPage() {
       icon: "bi-journal-text"
     };
   };
+
+  if (status !== "ready" || Object.keys(exams).length === 0) {
+    return (
+      <div>
+        <PageHeader icon="bi-pencil-square" title="الاختبارات والفروض" sub="نماذج الاختبارات والفروض" />
+        <div className="container py-5 text-center text-muted" dir="rtl">
+          {status === "loading" && "جارٍ التحميل..."}
+          {status === "error" && "تعذّر تحميل البيانات. حاول مرة أخرى لاحقاً."}
+          {status === "ready" && "لا توجد بيانات."}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -174,7 +230,7 @@ export default function ExamsPage() {
           transition={{ duration: 0.5, delay: 0.1 }}
         >
           <div className="d-flex gap-2 flex-wrap justify-content-center">
-            {Object.keys(EXAMS).map((lvl, index) => (
+            {Object.keys(exams).map((lvl, index) => (
               <motion.button
                 key={lvl}
                 onClick={() => handleLevel(lvl)}
@@ -458,17 +514,16 @@ export default function ExamsPage() {
                               </div>
                             </div>
 
-                            <motion.a
-                              href={file.file}
+                            <motion.button
+                              type="button"
                               className="download-btn"
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              onClick={() => downloadResource(file.id).catch(() => alert("تعذّر تحميل الملف"))}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
                               <i className="bi bi-download"></i>
                               <span>تحميل</span>
-                            </motion.a>
+                            </motion.button>
                           </div>
                         </motion.div>
                       );
@@ -882,6 +937,7 @@ export default function ExamsPage() {
         }
 
         .download-btn {
+          border: none; cursor: pointer; font-family: inherit;
           display: flex;
           align-items: center;
           gap: 8px;
