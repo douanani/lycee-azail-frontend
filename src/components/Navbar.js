@@ -23,6 +23,76 @@ function getInitials(name = "") {
 }
 
 const STYLES = `
+  :root { --nb-h: 68px; --nb-bottom-h: 64px; }
+  @media (max-width: 991.98px) { :root { --nb-h: 58px; } }
+
+  /* ─── Fixed top bar (all screen sizes) ─── */
+  .nb-top {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: var(--nb-h);
+    z-index: 1030;
+    background: linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    font-family: 'Cairo','Tajawal','Noto Sans Arabic',sans-serif;
+    transition: box-shadow .25s, background .25s;
+  }
+  .nb-top.scrolled {
+    background: linear-gradient(135deg,rgba(15,23,42,.96) 0%,rgba(30,58,95,.96) 100%);
+    box-shadow: 0 6px 24px rgba(0,0,0,.35);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  .nb-spacer { height: var(--nb-h); flex-shrink: 0; }
+  .nb-top-inner {
+    height: 100%; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 0 16px; max-width: 1320px; margin: 0 auto;
+  }
+  .nb-brand {
+    display: flex; align-items: center; gap: 10px; text-decoration: none;
+    min-width: 0; flex: 0 1 auto;
+  }
+  .nb-brand-logo {
+    width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+    background: linear-gradient(135deg,#1d4ed8,#3b82f6);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(59,130,246,.32);
+  }
+  .nb-brand-text { min-width: 0; }
+  .nb-brand-name {
+    font-size: 1.1rem; font-weight: 700; line-height: 1.2;
+    background: linear-gradient(135deg,#fff 0%,#93c5fd 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .nb-brand-sub { font-size: .68rem; color: #64748b; margin-top: 2px; white-space: nowrap; }
+  .nb-links { display: none; align-items: center; gap: 4px; list-style: none; padding: 0; margin: 0; }
+  .nb-auth { display: flex; align-items: center; flex-shrink: 0; }
+  .nb-login-btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 18px; border-radius: 20px;
+    font-family: 'Cairo','Tajawal',sans-serif; font-size: .88rem; font-weight: 600;
+    cursor: pointer; border: 1px solid rgba(255,255,255,.22);
+    background: rgba(59,130,246,.14); color: #fff;
+    transition: background .25s, transform .2s; -webkit-tap-highlight-color: transparent;
+  }
+  .nb-login-btn:hover { background: rgba(59,130,246,.3); }
+  .nb-login-btn:active { transform: scale(.96); }
+
+  @media (min-width: 992px) {
+    .nb-links { display: flex; }
+    .nb-top-inner { gap: 16px; }
+  }
+  @media (max-width: 991.98px) {
+    .nb-top-inner { padding: 0 12px; }
+    .nb-brand-logo { width: 36px; height: 36px; border-radius: 10px; }
+    .nb-brand-name { font-size: .98rem; max-width: calc(100vw - 150px); }
+    .nb-brand-sub { display: none; }
+    .nb-login-btn { padding: 7px 14px; font-size: .82rem; }
+    .nb-dropdown { left: 0; right: auto; }
+  }
+  @media (max-width: 360px) {
+    .nb-login-btn span { display: none; }
+    .nb-login-btn { padding: 9px 11px; }
+  }
   @keyframes nb-spin { to { transform: rotate(360deg); } }
   @keyframes nb-fadeIn {
     from { opacity: 0; transform: translateY(-6px) scale(.97); }
@@ -153,7 +223,8 @@ const STYLES = `
     background: linear-gradient(180deg, #0d1b2e 0%, #0f172a 100%);
     border-top: 1px solid rgba(255,255,255,.08);
     padding: 0;
-    height: 64px;
+    height: calc(var(--nb-bottom-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     box-shadow: 0 -4px 24px rgba(0,0,0,.35);
@@ -264,7 +335,8 @@ const STYLES = `
   /* ─── More panel (slide up) ─── */
   .nb-more-panel {
     position: fixed;
-    bottom: 64px; left: 0; right: 0;
+    bottom: calc(var(--nb-bottom-h) + env(safe-area-inset-bottom, 0px)); left: 0; right: 0;
+    max-height: calc(100vh - var(--nb-h) - var(--nb-bottom-h) - 24px); overflow-y: auto;
     background: #1e293b;
     border-top: 1px solid rgba(255,255,255,.1);
     border-radius: 20px 20px 0 0;
@@ -355,7 +427,7 @@ const STYLES = `
   /* body padding so content doesn't hide behind bottom bar on mobile */
   @media (max-width: 991.98px) {
     .nb-bottom-bar { display: flex !important; }
-    body { padding-bottom: 64px; }
+    body { padding-bottom: calc(var(--nb-bottom-h) + env(safe-area-inset-bottom, 0px)); }
   }
 `;
 
@@ -394,6 +466,7 @@ export default function Navbar() {
   const [loggingOut,    setLoggingOut]    = useState(false);
   const [dropdownOpen,  setDropdownOpen]  = useState(false);
   const [morePanelOpen, setMorePanelOpen] = useState(false);
+  const [scrolled,      setScrolled]      = useState(false);
 
   const NAV_LINKS = [
     { id: "home",      label: "الرئيسية",      icon: "bi-house-fill",            path: "/" },
@@ -443,6 +516,13 @@ export default function Navbar() {
   }, [location]);
 
   useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
     const handler = (e) => {
       if (dropRef.current && !dropRef.current.contains(e.target))
         setDropdownOpen(false);
@@ -469,6 +549,9 @@ export default function Navbar() {
 
   const homeActive = location.pathname === "/";
 
+  // Dashboards have their own layout/topbar: no site navbar there.
+  if (["/admin", "/teacher"].some((p) => location.pathname.startsWith(p))) return null;
+
   return (
     <>
       <style>{STYLES}</style>
@@ -476,93 +559,41 @@ export default function Navbar() {
       {/* ════════════════════════════════════════════
           DESKTOP / TABLET  — top navbar (unchanged)
           ════════════════════════════════════════════ */}
-      <nav
-        className="navbar navbar-expand-lg navbar-dark sticky-top"
-        style={{
-          background: "linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%)",
-          borderBottom: "1px solid rgba(255,255,255,.08)",
-          backdropFilter: "blur(10px)",
-          fontFamily: "'Cairo','Tajawal','Noto Sans Arabic',sans-serif",
-          zIndex: 1000,
-        }}
-      >
-        <div
-          className="container py-2"
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}
-        >
+      <header className={`nb-top${scrolled ? " scrolled" : ""}`}>
+        <div className="nb-top-inner">
           {/* ══ الشعار ══ */}
-          <Link
-            to="/"
-            className="navbar-brand d-flex align-items-center gap-2 flex-shrink-0"
-            style={{ textDecoration: "none", transition: "opacity .2s" }}
-            onMouseEnter={(e) => (e.currentTarget.style.opacity = ".85")}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-          >
-            <div style={{
-              width: "40px", height: "40px", borderRadius: "11px", flexShrink: 0,
-              background: "linear-gradient(135deg,#1d4ed8,#3b82f6)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 4px 14px rgba(59,130,246,.32)",
-            }}>
-              <BI icon="bi-building" marginEnd="me-0" style={{ fontSize: "1.3rem", color: "white" }} />
+          <Link to="/" className="nb-brand">
+            <div className="nb-brand-logo">
+              <BI icon="bi-building" marginEnd="me-0" style={{ fontSize: "1.25rem", color: "white" }} />
             </div>
-            <div>
-              <div style={{
-                fontSize: "1.1rem", fontWeight: "700", lineHeight: "1.2",
-                background: "linear-gradient(135deg,#fff 0%,#93c5fd 100%)",
-                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-              }}>
-                {SCHOOL_NAME}
-              </div>
-              <div style={{ fontSize: "0.68rem", color: "#64748b", marginTop: "2px" }}>
-                مديرية التربية لولاية تلمسان
-              </div>
+            <div className="nb-brand-text">
+              <div className="nb-brand-name">{SCHOOL_NAME}</div>
+              <div className="nb-brand-sub">مديرية التربية لولاية تلمسان</div>
             </div>
           </Link>
 
-          {/* ══ زر القائمة (موبايل bootstrap — hidden, we use bottom bar instead) ══ */}
-          <button
-            className="navbar-toggler border-0 d-lg-none ms-auto"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarNav"
-            aria-label="Toggle navigation"
-            style={{ display: "none" }} /* hidden — bottom bar handles mobile nav */
-          >
-            <span className="navbar-toggler-icon" />
-          </button>
+          {/* ══ الروابط (desktop فقط) ══ */}
+          <ul className="nb-links">
+            {NAV_LINKS.map((link) => (
+              <li key={link.id}>
+                <Link
+                  to={link.path}
+                  className={[
+                    "nb-link-item",
+                    link.id === "dashboard" ? "dashboard-link" : "",
+                    isActive(link.path, link.id) ? "active" : "",
+                  ].join(" ").trim()}
+                >
+                  <BI icon={link.icon} marginEnd="me-0" style={{ fontSize: "1rem" }} />
+                  <span>{link.label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
 
-          {/* ══ الروابط + Auth (desktop only) ══ */}
-          <div className="collapse navbar-collapse d-none d-lg-block" id="navbarNav" style={{ flexGrow: 0 }}>
-            <div
-              className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center"
-              style={{ gap: "8px", width: "100%" }}
-            >
-              <ul className="navbar-nav flex-row flex-wrap gap-1" style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {NAV_LINKS.map((link) => (
-                  <li key={link.id}>
-                    <Link
-                      to={link.path}
-                      className={[
-                        "nb-link-item",
-                        link.id === "dashboard" ? "dashboard-link" : "",
-                        isActive(link.path, link.id) ? "active" : "",
-                      ].join(" ").trim()}
-                    >
-                      <BI icon={link.icon} marginEnd="me-0" style={{ fontSize: "1rem" }} />
-                      <span>{link.label}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="d-none d-lg-block flex-shrink-0"
-                style={{ width: "1px", height: "30px", background: "rgba(255,255,255,.1)", margin: "0 4px" }}
-              />
-
-              {/* Auth */}
-              <div className="d-flex align-items-center gap-2 flex-shrink-0">
-                {user ? (
+          {/* ══ Auth (كل الشاشات) ══ */}
+          <div className="nb-auth">
+              {user ? (
                   <div ref={dropRef} style={{ position: "relative" }}>
                     <button
                       className={`nb-avatar-btn${dropdownOpen ? " nb-avatar-open" : ""}`}
@@ -574,7 +605,7 @@ export default function Navbar() {
                       <BI
                         icon="bi-chevron-down"
                         marginEnd="me-0"
-                        className="nb-avatar-chevron d-none d-lg-block"
+                        className="nb-avatar-chevron"
                         style={{ fontSize: "0.85rem" }}
                       />
                     </button>
@@ -619,27 +650,15 @@ export default function Navbar() {
                     )}
                   </div>
                 ) : (
-                  <button
-                    onClick={() => navigate("/auth")}
-                    style={{
-                      display: "flex", alignItems: "center", gap: "7px",
-                      padding: "8px 18px", borderRadius: "20px",
-                      fontFamily: "'Cairo','Tajawal',sans-serif",
-                      fontSize: "0.88rem", fontWeight: "600",
-                      cursor: "pointer", border: "1px solid rgba(255,255,255,.22)",
-                      background: "rgba(59,130,246,.14)", color: "#fff",
-                      transition: "background .25s, box-shadow .25s, transform .2s",
-                    }}
-                  >
+                  <button className="nb-login-btn" onClick={() => navigate("/auth")}>
                     <BI icon="bi-box-arrow-in-right" marginEnd="me-0" style={{ fontSize: "1rem" }} />
                     <span>تسجيل الدخول</span>
                   </button>
                 )}
-              </div>
-            </div>
           </div>
         </div>
-      </nav>
+      </header>
+      <div className="nb-spacer" aria-hidden="true" />
 
       {/* ════════════════════════════════════════════
           MOBILE — bottom tab bar
