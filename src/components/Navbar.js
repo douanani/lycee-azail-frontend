@@ -23,7 +23,7 @@ function getInitials(name = "") {
 }
 
 const STYLES = `
-  :root { --nb-h: 68px; --nb-bottom-h: 64px; }
+  :root { --nb-h: 68px; --nb-bottom-h: 60px; }
   @media (max-width: 991.98px) { :root { --nb-h: 58px; } }
 
   /* ─── Fixed top bar (all screen sizes) ─── */
@@ -284,54 +284,6 @@ const STYLES = `
     transition: opacity .2s;
   }
 
-  /* ─── Home center button ─── */
-  .nb-home-wrap {
-    flex: 0 0 72px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-  }
-
-  .nb-home-btn {
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
-    border: 3px solid #0f172a;
-    box-shadow: 0 4px 20px rgba(59,130,246,.55), 0 0 0 1px rgba(59,130,246,.3);
-    display: flex; align-items: center; justify-content: center;
-    color: white;
-    cursor: pointer;
-    text-decoration: none;
-    -webkit-tap-highlight-color: transparent;
-    transition: transform .18s, box-shadow .18s;
-    margin-bottom: 12px; /* lifts above bar */
-    position: relative;
-    z-index: 2;
-  }
-  .nb-home-btn:active {
-    transform: scale(0.9);
-    box-shadow: 0 2px 10px rgba(59,130,246,.4);
-  }
-  .nb-home-btn.active {
-    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
-    box-shadow: 0 4px 24px rgba(37,99,235,.7), 0 0 0 2px rgba(59,130,246,.5);
-  }
-  .nb-home-btn i { font-size: 1.5rem; }
-
-  /* Home label below */
-  .nb-home-label {
-    position: absolute;
-    bottom: 6px;
-    left: 50%; transform: translateX(-50%);
-    font-size: 0.58rem;
-    font-weight: 700;
-    color: rgba(255,255,255,.5);
-    white-space: nowrap;
-    letter-spacing: 0.02em;
-  }
-  .nb-home-btn.active ~ .nb-home-label { color: #93c5fd; }
-
   /* ─── More panel (slide up) ─── */
   .nb-more-panel {
     position: fixed;
@@ -424,6 +376,38 @@ const STYLES = `
     animation: nb-fadeIn .2s ease both;
   }
 
+  /* ─── Minimalist overrides ─── */
+  .nb-bottom-bar { --nb-bottom-h: 60px; background: #0f172a; box-shadow: none; border-top: 1px solid rgba(255,255,255,.08); }
+  .nb-bottom-inner { width: 100%; max-width: 560px; }
+  .nb-tab { gap: 4px; padding: 6px 2px; color: rgba(255,255,255,.55); }
+  .nb-tab i { font-size: 1.45rem; }
+  .nb-tab span { font-size: .68rem; font-weight: 600; }
+  .nb-tab.active { color: #60a5fa; }
+  .nb-tab.active::before {
+    content: ''; position: absolute; top: 0; left: 28%; right: 28%;
+    height: 3px; border-radius: 0 0 3px 3px; background: #3b82f6;
+  }
+  .nb-tab:active { transform: none; background: rgba(255,255,255,.05); }
+  .nb-avatar-btn { padding: 0; }
+  .nb-avatar-circle { width: 38px; height: 38px; font-size: 14px; }
+  .nb-icon-btn {
+    width: 42px; height: 42px; border-radius: 50%; display: none;
+    align-items: center; justify-content: center; cursor: pointer;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
+    color: #fff; font-size: 1.3rem; -webkit-tap-highlight-color: transparent;
+  }
+  .nb-icon-btn:active { background: rgba(59,130,246,.35); }
+  @media (max-width: 991.98px) {
+    .nb-login-btn { display: none; }
+    .nb-icon-btn { display: flex; }
+    .nb-avatar-chevron { display: none; }
+    .nb-brand-name { font-size: 1.05rem; }
+    .nb-brand-logo { width: 38px; height: 38px; }
+    .nb-more-panel-grid { grid-template-columns: repeat(3, 1fr); }
+    .nb-more-item i { font-size: 1.5rem; }
+    .nb-more-item { font-size: .78rem; padding: 14px 6px; }
+  }
+
   /* body padding so content doesn't hide behind bottom bar on mobile */
   @media (max-width: 991.98px) {
     .nb-bottom-bar { display: flex !important; }
@@ -432,18 +416,17 @@ const STYLES = `
 `;
 
 // Bottom nav tab definitions (excluding home, which is center)
-const BOTTOM_TABS_LEFT  = [
-  { id: "lessons",   label: "الدروس",    icon: "bi-journal-bookmark-fill", path: "/lessons" },
-  { id: "exams",     label: "الفروض",    icon: "bi-clipboard-data-fill",   path: "/exams" },
-];
-const BOTTOM_TABS_RIGHT = [
-  { id: "timetable", label: "الجدول",    icon: "bi-clock-fill",            path: "/timetable" },
-  { id: "contact",   label: "اتصل بنا",  icon: "bi-telephone-fill",        path: "/contact" },
+const BOTTOM_TABS = [
+  { id: "home",      label: "الرئيسية", icon: "bi-house-door-fill",       path: "/" },
+  { id: "lessons",   label: "الدروس",   icon: "bi-journal-bookmark-fill", path: "/lessons" },
+  { id: "exams",     label: "الفروض",   icon: "bi-clipboard-data-fill",   path: "/exams" },
+  { id: "timetable", label: "الجدول",   icon: "bi-clock-fill",            path: "/timetable" },
 ];
 
-// All links that appear in the "more" panel
+// Links shown in the "more" panel
 const MORE_LINKS = [
-  { id: "activities", label: "النشاطات",     icon: "bi-calendar-event-fill",   path: "/activities" },
+  { id: "activities", label: "النشاطات",  icon: "bi-calendar-event-fill", path: "/activities" },
+  { id: "contact",    label: "اتصل بنا",  icon: "bi-telephone-fill",      path: "/contact" },
 ];
 
 const ROLE_LABEL = {
@@ -650,10 +633,15 @@ export default function Navbar() {
                     )}
                   </div>
                 ) : (
+                  <>
+                  <button className="nb-icon-btn" onClick={() => navigate("/auth")} aria-label="تسجيل الدخول">
+                    <i className="bi bi-person"></i>
+                  </button>
                   <button className="nb-login-btn" onClick={() => navigate("/auth")}>
                     <BI icon="bi-box-arrow-in-right" marginEnd="me-0" style={{ fontSize: "1rem" }} />
                     <span>تسجيل الدخول</span>
                   </button>
+                  </>
                 )}
           </div>
         </div>
@@ -666,41 +654,14 @@ export default function Navbar() {
       <div className="nb-bottom-bar">
         <div className="nb-bottom-inner">
 
-          {/* LEFT TABS */}
-          {BOTTOM_TABS_LEFT.map((tab) => (
+          {BOTTOM_TABS.map((tab) => (
             <Link
               key={tab.id}
               to={tab.path}
-              className={`nb-tab${isActive(tab.path, tab.id) ? " active" : ""}`}
+              className={`nb-tab${(tab.id === "home" ? homeActive : isActive(tab.path, tab.id)) ? " active" : ""}`}
             >
               <i className={`bi ${tab.icon}`}></i>
               <span>{tab.label}</span>
-              <span className="nb-tab-dot"></span>
-            </Link>
-          ))}
-
-          {/* CENTER HOME BUTTON */}
-          <div className="nb-home-wrap">
-            <Link
-              to="/"
-              className={`nb-home-btn${homeActive ? " active" : ""}`}
-              aria-label="الرئيسية"
-            >
-              <i className="bi bi-house-fill"></i>
-            </Link>
-            <span className="nb-home-label">الرئيسية</span>
-          </div>
-
-          {/* RIGHT TABS */}
-          {BOTTOM_TABS_RIGHT.map((tab) => (
-            <Link
-              key={tab.id}
-              to={tab.path}
-              className={`nb-tab${isActive(tab.path, tab.id) ? " active" : ""}`}
-            >
-              <i className={`bi ${tab.icon}`}></i>
-              <span>{tab.label}</span>
-              <span className="nb-tab-dot"></span>
             </Link>
           ))}
 
@@ -710,9 +671,8 @@ export default function Navbar() {
             onClick={() => setMorePanelOpen((v) => !v)}
             aria-label="المزيد"
           >
-            <i className={`bi ${morePanelOpen ? "bi-x-lg" : "bi-grid-3x3-gap-fill"}`}></i>
+            <i className={`bi ${morePanelOpen ? "bi-x-lg" : "bi-three-dots"}`}></i>
             <span>المزيد</span>
-            <span className="nb-tab-dot"></span>
           </button>
         </div>
       </div>

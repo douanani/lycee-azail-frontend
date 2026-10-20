@@ -1,3 +1,7 @@
+/* Prevent horizontal scroll (e.g. off-screen framer-motion entrance offsets) */
+html, body { max-width: 100%; overflow-x: hidden; }
+@supports (overflow: clip) { html, body { overflow-x: clip; } }
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
