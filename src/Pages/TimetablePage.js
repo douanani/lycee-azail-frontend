@@ -40,7 +40,7 @@ export default function TimetablePage() {
   const classes = Object.keys(tt.data);
   const [selected, setSelected] = useState(null);
   const [currentDay, setCurrentDay] = useState(null);
-  const [viewMode, setViewMode] = useState("week"); // 'week' or 'day'
+  const [viewMode, setViewMode] = useState(typeof window !== "undefined" && window.innerWidth < 768 ? "day" : "week"); // 'week' or 'day'
   const grid = tt.data[selected] || {};
 
   useEffect(() => {
@@ -58,9 +58,8 @@ export default function TimetablePage() {
   useEffect(() => {
     const days = DAYS;
     const today = new Date().getDay();
-    if (today >= 0 && today <= 4) {
-      setCurrentDay(days[today]);
-    }
+    // Fri/Sat: no school, show the first day so the day view is never empty
+    setCurrentDay(today >= 0 && today <= 4 ? days[today] : days[0]);
   }, []);
 
   const getSubjectIcon = (subject) => {

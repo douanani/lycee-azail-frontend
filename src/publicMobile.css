@@ -1,0 +1,19 @@
+/* Phone polish for the public pages (loaded globally; everything is inside the media query). */
+@media (max-width: 767.98px) {
+  html body .page-hero { padding-top: 1.6rem !important; padding-bottom: 1.6rem !important; }
+  html body .page-hero .page-hero-icon { margin-bottom: .6rem !important; }
+  html body .page-hero .page-hero-icon i { font-size: 2.4rem !important; }
+  html body .page-hero h1 { font-size: 1.6rem !important; margin-bottom: .4rem !important; }
+  html body .page-hero p { font-size: .92rem !important; margin-bottom: 0; }
+
+  /* Resource cards (lessons / exams): stack so the title gets the full width */
+  html body .file-card-content { flex-direction: column !important; align-items: stretch !important; text-align: start; gap: 12px !important; padding: 16px !important; position: relative; }
+  html body .file-card-content .file-icon-wrapper { position: absolute; top: 16px; inset-inline-start: 16px; }
+  html body .file-card-content .file-info { padding-inline-start: 62px; min-height: 50px; }
+  html body .file-card-content .download-btn { width: 100%; justify-content: center; min-height: 44px; }
+  html body .file-name { font-size: .95rem; margin-bottom: 6px !important; }
+
+  /* Tap targets */
+  html body .level-tab, html body .view-option, html body .day-btn, html body .type-filter-btn { min-height: 40px; }
+  html body input, html body select, html body textarea { font-size: 16px; }
+}

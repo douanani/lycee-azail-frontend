@@ -51,11 +51,11 @@ export default function Footer() {
             <ul className="list-unstyled text-white-50">
               <li className="mb-2 d-flex align-items-center gap-2">
                 <BI icon="bi-geo-alt-fill" marginEnd="me-0" />
-                <span>ولاية تلمسان، الجزائر</span>
+                <span>بلدية العزايل، ولاية تلمسان</span>
               </li>
               <li className="mb-2 d-flex align-items-center gap-2">
                 <BI icon="bi-telephone-fill" marginEnd="me-0" />
-                <span>041 XX XX XX</span>
+                <span>043 54 67 64</span>
               </li>
               <li className="mb-2 d-flex align-items-center gap-2">
                 <BI icon="bi-envelope-fill" marginEnd="me-0" />
@@ -68,7 +68,10 @@ export default function Footer() {
         <hr className="my-4 bg-secondary" />
 
         <div className="text-center text-white-50 small">
-          Designed and Developed by Djilali Ouanani ©
+         © Designed and Developed by Djilali Ouanani 
+        </div>
+        <div className="text-center text-white-50 small">
+          التصميم والبرمجة بواسطة جيلالي وناني ©
         </div>
       </div>
     </footer>

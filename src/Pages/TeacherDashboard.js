@@ -9,6 +9,7 @@ import {
   logout, errMsg,
 } from "../api/services";
 import useAuthGuard from "../api/useAuthGuard";
+import MobileDashNav, { useTableLabels } from "./MobileDashNav";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const typeConfig = {
@@ -40,6 +41,8 @@ function Counter({ to }) {
 }
 
 // ─── Modal ─────────────────────────────────────────────────────────────────────
+const isMobile = () => typeof window !== "undefined" && window.innerWidth < 992;
+
 function Modal({ show, onClose, title, children }) {
   useEffect(() => {
     document.body.style.overflow = show ? "hidden" : "";
@@ -49,8 +52,9 @@ function Modal({ show, onClose, title, children }) {
   return (
     <motion.div className="t-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
       <motion.div className="t-modal"
-        initial={{ opacity: 0, y: 50, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 50 }}
+        initial={isMobile() ? { y: "100%" } : { opacity: 0, y: 50, scale: 0.94 }}
+        animate={isMobile() ? { y: 0 } : { opacity: 1, y: 0, scale: 1 }}
+        exit={isMobile() ? { y: "100%" } : { opacity: 0, y: 50 }}
         transition={{ type: "spring", stiffness: 220, damping: 24 }}
         onClick={e => e.stopPropagation()}>
         <div className="t-modal-head">
@@ -83,6 +87,7 @@ export default function TeacherDashboard() {
 
   // ── auth user ──────────────────────────────────────────────────────────────
   const teacher = useAuthGuard(["teacher", "admin"]);
+  useTableLabels();
 
   // ── UI ─────────────────────────────────────────────────────────────────────
   const [active, setActive]       = useState("overview");
@@ -816,6 +821,13 @@ export default function TeacherDashboard() {
           </>
         )}
       </Modal>
+
+      <MobileDashNav
+        items={NAV.map(n => ({ ...n, label: { overview: "الرئيسية", profile: "حسابي" }[n.id] || n.label, badge: n.id === "announcements" ? unreadCount : 0 }))}
+        active={active}
+        onSelect={setActive}
+        accent="#6366f1"
+      />
 
       {/* ══ STYLES ══ */}
       <style>{`

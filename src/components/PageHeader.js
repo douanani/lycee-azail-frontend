@@ -4,7 +4,7 @@ import { BI } from "../Utils/icons";
 export default function PageHeader({ icon, title, sub }) {
   return (
     <section
-      className="py-5 text-white"
+      className="py-5 text-white page-hero"
       style={{
         background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)",
       }}
@@ -12,7 +12,7 @@ export default function PageHeader({ icon, title, sub }) {
       <div className="container">
         <div className="row justify-content-center text-center">
           <div className="col-lg-8">
-            <div className="mb-4" data-aos="zoom-in">
+            <div className="mb-4 page-hero-icon" data-aos="zoom-in">
               <BI
                 icon={icon}
                 className="text-info"

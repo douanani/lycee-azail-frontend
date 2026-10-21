@@ -1,0 +1,197 @@
+/* Mobile / tablet (≤991px) app-style layout for Admin + Teacher dashboards.
+   Desktop is untouched: everything here is inside the media query except the bar itself (hidden on desktop). */
+
+.dm-bar, .dm-sheet, .dm-overlay { display: none; }
+
+@media (max-width: 991.98px) {
+  :root { --dm-bar-h: 62px; }
+
+  /* ── Layout: no sidebar, bottom tab bar instead ── */
+  html body .admin-sidebar, html body .td-sidebar { display: none !important; }
+  html body .admin-root, html body .td-root { display: block; min-height: 100vh; min-height: 100dvh; }
+  html body .admin-main, html body .td-main { width: 100%; min-height: 100vh; padding-bottom: calc(var(--dm-bar-h) + env(safe-area-inset-bottom, 0px) + 12px); }
+
+  .dm-bar {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1200;
+    height: calc(var(--dm-bar-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: #fff; border-top: 1px solid #e5e7eb;
+    box-shadow: 0 -6px 20px rgba(15,23,42,.06);
+    font-family: 'Noto Sans Arabic','Cairo','Tajawal',sans-serif;
+  }
+  .dm-tab {
+    flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    background: none; border: 0; color: #94a3b8; cursor: pointer; position: relative;
+    -webkit-tap-highlight-color: transparent; font-family: inherit;
+  }
+  .dm-tab-icon { position: relative; display: flex; align-items: center; justify-content: center; width: 52px; height: 28px; border-radius: 14px; transition: background .2s, color .2s; }
+  .dm-tab-icon i { font-size: 1.35rem; line-height: 1; }
+  .dm-tab-label { font-size: .68rem; font-weight: 600; white-space: nowrap; }
+  .dm-tab.active { color: var(--dm-accent, #4f46e5); }
+  .dm-tab.active .dm-tab-icon { background: color-mix(in srgb, var(--dm-accent, #4f46e5) 14%, transparent); }
+  .dm-tab:active .dm-tab-icon { transform: scale(.92); }
+  .dm-badge {
+    position: absolute; top: -2px; left: 8px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+    background: #f43f5e; color: #fff; font-size: .6rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  }
+
+  .dm-overlay { display: block; position: fixed; inset: 0; z-index: 1190; background: rgba(15,23,42,.45); }
+  .dm-sheet {
+    display: block; position: fixed; left: 0; right: 0; z-index: 1195;
+    bottom: calc(var(--dm-bar-h) + env(safe-area-inset-bottom, 0px));
+    background: #fff; border-radius: 22px 22px 0 0; padding: 10px 16px 16px;
+    box-shadow: 0 -10px 30px rgba(15,23,42,.15); animation: dm-up .22s ease both;
+    font-family: 'Noto Sans Arabic','Cairo','Tajawal',sans-serif;
+  }
+  @keyframes dm-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .dm-sheet-handle { width: 38px; height: 4px; border-radius: 4px; background: #e2e8f0; margin: 0 auto 14px; }
+  .dm-sheet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .dm-sheet-item {
+    display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 6px;
+    border: 1px solid #eef0f4; border-radius: 16px; background: #f8fafc; color: #334155;
+    font-size: .78rem; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .dm-sheet-item i { font-size: 1.5rem; color: var(--dm-accent, #4f46e5); }
+  .dm-sheet-item.active { background: color-mix(in srgb, var(--dm-accent, #4f46e5) 10%, #fff); border-color: color-mix(in srgb, var(--dm-accent, #4f46e5) 35%, #fff); }
+  .dm-sheet-footer { display: flex; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #f1f5f9; }
+  .dm-sheet-action {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 14px;
+    border: 0; background: #f1f5f9; color: #334155; font-weight: 700; font-size: .85rem; cursor: pointer; font-family: inherit;
+  }
+  .dm-sheet-action.danger { background: #fff1f2; color: #e11d48; }
+
+  /* ── Top bars: compact + sticky ── */
+  html body .admin-topbar, html body .td-topbar {
+    padding: 10px 14px !important; min-height: 56px; position: sticky; top: 0; z-index: 50;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+  }
+  html body .topbar-title, html body .td-topbar-title { font-size: 1.05rem !important; }
+  html body .topbar-breadcrumb { display: none; }
+  html body .td-topbar-sub { font-size: .7rem; margin-top: 0; }
+  html body .topbar-right, html body .td-topbar-actions { gap: 8px; }
+  html body .topbar-badge { padding: 5px 10px; font-size: .72rem; }
+  html body .topbar-btn, html body .td-icon-btn { width: 40px; height: 40px; }
+  html body .td-upload-quick { display: none !important; }
+
+  /* ── Sections ── */
+  html body .section-content, html body .td-section { padding: 14px !important; }
+  html body .section-toolbar, html body .td-toolbar { flex-direction: column; align-items: stretch !important; gap: 10px; margin-bottom: 14px; }
+  html body .section-toolbar .primary-action-btn, html body .td-primary-btn { width: 100%; justify-content: center; min-height: 46px; }
+  html body .filter-chips, html body .td-filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; margin: 0 -14px; padding-inline: 14px; scrollbar-width: none; }
+  html body .filter-chips::-webkit-scrollbar, html body .td-filters::-webkit-scrollbar { display: none; }
+  html body .filter-chip, html body .td-filter-btn { flex-shrink: 0; min-height: 38px; }
+  html body .td-search-wrap { max-width: 100% !important; width: 100%; }
+
+  /* ── Stats ── */
+  html body .stats-grid, html body .td-stats { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; margin-bottom: 16px; }
+  html body .stat-card, html body .td-stat-card { padding: 14px !important; gap: 10px !important; border-radius: 16px !important; }
+  html body .stat-icon-wrap { width: 40px; height: 40px; font-size: 1.15rem; border-radius: 12px; }
+  html body .stat-value { font-size: 1.3rem; }
+  html body .stat-label { font-size: .72rem; }
+  html body .td-stat-val { font-size: 1.3rem; }
+  html body .charts-row { grid-template-columns: 1fr !important; gap: 14px; margin-bottom: 16px; }
+  html body .chart-card { padding: 16px; border-radius: 16px; }
+  html body .bar-label { min-width: 84px; font-size: .72rem; }
+  html body .td-welcome { padding: 18px !important; border-radius: 18px !important; }
+  html body .td-welcome-text h2 { font-size: 1.15rem; }
+  html body .td-welcome-deco { display: none; }
+
+  /* ── Tables → cards ── */
+  html body .table-card, html body .td-card { border-radius: 16px; }
+  html body .table-card-header, html body .td-card-head { padding: 14px 16px; }
+  html body .data-table-wrap { overflow: visible; }
+  html body .data-table, html body .data-table tbody, html body .data-table tr, html body .data-table td { display: block; width: 100%; }
+  html body .data-table thead { display: none; }
+  html body .data-table tbody tr {
+    width: auto; margin: 0 12px 10px; padding: 8px 14px; background: #fff;
+    border: 1px solid #eef0f4 !important; border-radius: 14px;
+  }
+  html body .data-table tbody tr:last-child { margin-bottom: 12px; }
+  html body .data-table tbody td {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 8px 0 !important; border: 0 !important; font-size: .85rem; text-align: start;
+  }
+  html body .data-table tbody td + td { border-top: 1px dashed #f1f5f9 !important; }
+  html body .data-table tbody td::before {
+    content: attr(data-label); flex-shrink: 0; color: #94a3b8; font-size: .72rem; font-weight: 600;
+  }
+  html body .data-table tbody td.td-title { max-width: none; font-weight: 700; justify-content: flex-start; }
+  html body .data-table tbody td.td-title::before { display: none; }
+  html body .data-table tbody td:empty { display: none; }
+  html body .tbl-action-btn { width: 38px; height: 38px; }
+
+  /* ── Cards & lists ── */
+  html body .users-grid { grid-template-columns: 1fr !important; gap: 12px; }
+  html body .td-res-grid { grid-template-columns: 1fr !important; }
+  html body .td-resource-row { padding: 12px 14px; flex-wrap: wrap; }
+  html body .td-res-chips { display: none; }
+  html body .announce-card, html body .td-ann-card { border-radius: 14px; }
+  html body .announce-card { flex-wrap: wrap; }
+  html body .announce-actions { padding: 0 14px 12px; width: 100%; justify-content: flex-end; }
+  html body .td-profile-stats { grid-template-columns: repeat(2, 1fr); }
+  html body .td-upload-card, html body .td-profile-card { padding: 18px !important; border-radius: 18px !important; }
+  html body .td-form-actions { flex-direction: column-reverse; }
+  html body .td-form-actions > button { width: 100%; justify-content: center; min-height: 46px; }
+
+  /* ── Settings / timetable: tabs scroll, wide grids scroll inside their own box ── */
+  html body .settings-tabs { overflow-x: auto; flex-wrap: nowrap !important; scrollbar-width: none; margin: 0 -14px 14px; padding: 0 14px; }
+  html body .settings-tabs::-webkit-scrollbar { display: none; }
+  html body .settings-tab { flex-shrink: 0; }
+  html body .settings-grid { grid-template-columns: 1fr !important; }
+
+  /* ── Forms: 16px inputs (no iOS zoom), big touch targets ── */
+  html body .admin-root input, html body .admin-root select, html body .admin-root textarea, html body .td-root input, html body .td-root select, html body .td-root textarea, html body .modal-panel input, html body .modal-panel select, html body .modal-panel textarea, html body .t-modal input, html body .t-modal select, html body .t-modal textarea { font-size: 16px !important; }
+  html body .field-wrap input, html body .field-wrap select, html body .td-input-wrap select, html body .plain-input { min-height: 46px; }
+  html body .form-grid, html body .td-form-grid { grid-template-columns: 1fr !important; gap: 14px; }
+  html body .modal-btn { min-height: 46px; flex: 1; justify-content: center; }
+  html body .modal-actions { gap: 10px; }
+
+  /* ── Modals → bottom sheets ── */
+  html body .modal-overlay, html body .t-overlay { align-items: flex-end !important; padding: 0 !important; }
+  html body .modal-panel, html body .t-modal {
+    max-width: 100% !important; width: 100%; border-radius: 22px 22px 0 0 !important;
+    max-height: 92vh; max-height: 92dvh; padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html body .modal-header-bar, html body .t-modal-head { padding: 16px 18px; position: sticky; top: 0; background: #fff; z-index: 2; }
+  html body .modal-body-content, html body .t-modal-body { padding: 18px; }
+
+  /* ── Toasts above the tab bar ── */
+  html body .admin-toast, html body .td-toast { top: calc(12px + env(safe-area-inset-top, 0px)) !important; max-width: calc(100vw - 24px); font-size: .82rem !important; padding: 11px 18px !important; }
+
+  /* ── Refinements ── */
+  html body .modal-overlay, html body .t-overlay { z-index: 1300 !important; }
+  html body .stat-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  html body .stat-value { font-size: 1.25rem; white-space: nowrap; }
+  html body .table-card { background: transparent !important; box-shadow: none !important; border: 0 !important; overflow: visible; }
+  html body .table-card-header { padding: 4px 2px 10px; border: 0; flex-wrap: wrap; gap: 8px; }
+  html body .data-table tbody td { font-size: .8rem; padding: 6px 0 !important; }
+  html body .data-table tbody td.td-title { font-size: .9rem; padding-bottom: 8px !important; }
+  html body .data-table tbody tr { box-shadow: 0 1px 3px rgba(15,23,42,.05); }
+  html body .user-card { display: flex; flex-wrap: wrap; align-items: center; border-radius: 16px; }
+  html body .user-card-header { padding: 14px 0 6px 0; padding-inline-start: 16px; background: transparent !important; flex: 0 0 auto; }
+  html body .user-avatar { width: 46px; height: 46px; font-size: 1.25rem; }
+  html body .user-status-dot { top: 12px; left: auto; right: 10px; }
+  html body .user-card-body { flex: 1; min-width: 0; padding: 12px 14px 8px; text-align: start; }
+  html body .user-name { margin: 0 0 4px; font-size: .95rem; }
+  html body .user-email { word-break: break-all; }
+  html body .user-card-footer { width: 100%; }
+  html body .tt-selector-group { min-width: 0 !important; width: 100%; }
+  html body .tt-selector-group select, html body .tt-selectors select { width: 100%; max-width: 100%; }
+  html body .tt-selectors { gap: 12px !important; }
+  html body .stats-grid .stat-card, html body .td-stats .td-stat-card { min-width: 0; }
+
+  /* ── Compact table cards (2-column grid) ── */
+  html body .data-table tbody tr { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; row-gap: 2px; padding: 12px 14px; }
+  html body .data-table tbody td { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 5px 0 !important; border: 0 !important; min-width: 0; word-break: break-word; }
+  html body .data-table tbody td + td { border-top: 0 !important; }
+  html body .data-table tbody td::before { font-size: .68rem; }
+  html body .data-table tbody td.td-title { grid-column: 1 / -1; }
+  html body .data-table tbody td:last-child { grid-column: 1 / -1; flex-direction: row; justify-content: flex-end; gap: 8px; padding-top: 8px !important; }
+  html body .data-table tbody td:last-child::before { display: none; }
+  html body .td-topbar, html body .admin-topbar { align-items: center; }
+
+  /* ── Teacher resource cards: compact row header ── */
+  html body .td-res-card-top { flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 12px; padding: 12px 16px !important; min-height: 0 !important; height: auto !important; }
+  html body .td-res-card-top i { font-size: 1.5rem !important; margin: 0 !important; }
+  html body .td-res-card-body { padding: 4px 16px 12px; }
+}

@@ -25,17 +25,22 @@ export default function ContactPage() {
                   {
                     icon: "bi-geo-alt-fill",
                     label: "العنوان",
-                    value: "ثانوية حاج بن جعفر، بلدية العزايل، ولاية تلمسان، الجزائر",
+                    value: "ثانوية حاج بن جعفر، بلدية العزايل، دائرة بني سنوس، ولاية تلمسان",
                   },
                   {
                     icon: "bi-printer-fill",
                     label: "الفاكس",
-                    value: "041 XX XX XX",
+                    value: "043 54 67 64",
                   },
                   {
                     icon: "bi-envelope-fill",
                     label: "البريد الإلكتروني",
                     value: "lyceeazail@gmail.com",
+                  },
+                  {
+                    icon: "bi-fb-fill",
+                    label: "صفحة الفيسبوك",
+                    value: "https://web.facebook.com/lyceeAzail",
                   },
                   {
                     icon: "bi-clock-fill",
