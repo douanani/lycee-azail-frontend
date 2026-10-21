@@ -368,7 +368,7 @@ export default function TeacherDashboard() {
               {/* welcome banner */}
               <div className="td-welcome">
                 <div className="td-welcome-text">
-                  <h2>مرحباً، {teacher?.name?.split(" ").slice(0, 2).join(" ") || "أستاذ"} 👋</h2>
+                  <h2>مرحباً، أستاذ 👋</h2>
                   <p>إليك ملخص نشاطاتك في المنصة لهذا الموسم الدراسي.</p>
                 </div>
                 <div className="td-welcome-deco">
