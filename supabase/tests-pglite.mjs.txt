@@ -16,6 +16,7 @@ alter default privileges in schema public grant all on tables to anon, authentic
 alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;`);
 await db.exec(mig);
+await db.exec(fs.readFileSync("/home/claude/supabase/migrations/20261022000000_download_rate_limit.sql","utf8"));
 let pass=0, fail=0;
 const ok=(n,c)=>{ if(c){pass++;console.log("PASS",n)}else{fail++;console.log("FAIL",n)} };
 async function as(role, uid, sql, params){
@@ -64,9 +65,14 @@ r = await as('anon',null,`insert into public.resources(user_id,academic_year_id,
 r = await as('anon',null,`insert into public.grade_levels(name,code,year_number,stream) values('z','ZZ',1,'sciences')`); ok("anon write ref table denied", !!r.e);
 r = await as('authenticated',T,`insert into public.grade_levels(name,code,year_number,stream) values('z','ZZ',1,'sciences')`); ok("teacher write ref table denied", !!r.e);
 r = await as('authenticated',A,`insert into public.subjects(name,code) values('z','ZZ') returning id`); ok("admin write ref ok", !!r.r);
-r = await as('authenticated',T,`select public.increment_download(${rid})`); ok("increment_download denied for authenticated", !!r.e);
-r = await as('anon',null,`select public.increment_download(${rid})`); ok("increment_download denied for anon", !!r.e);
-r = await as('service_role',null,`select public.increment_download(${rid})`); ok("increment_download ok service_role", !!r.r);
+r = await as('authenticated',T,`select public.increment_download(${rid},'h')`); ok("increment_download denied for authenticated", !!r.e);
+r = await as('anon',null,`select public.increment_download(${rid},'h')`); ok("increment_download denied for anon", !!r.e);
+r = await as('service_role',null,`select public.increment_download(${rid},'h')`); ok("increment_download ok service_role", !!r.r);
+r = await as('service_role',null,`select public.increment_download(${rid},'h') c`); ok("same IP within 1h not counted", r.r?.rows[0].c===false);
+r = await as('service_role',null,`select public.increment_download(${rid},'h2') c`); ok("other IP counted", r.r?.rows[0].c===true);
+r = await as('service_role',null,`update public.download_hits set last_hit=now()-interval '2 hours' where ip_hash='h' returning 1`);
+r = await as('service_role',null,`select public.increment_download(${rid},'h') c`); ok("same IP after 1h counted again", r.r?.rows[0].c===true);
+r = await as('anon',null,`select * from public.download_hits`); ok("download_hits not readable by anon", !!r.e);
 r = await as('authenticated',A,`select public.dashboard_stats() s`); ok("dashboard admin ok", !!r.r && r.r.rows[0].s.total_lessons>0);
 r = await as('authenticated',T,`select public.dashboard_stats()`); ok("dashboard teacher denied", !!r.e);
 // escalation
