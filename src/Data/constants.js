@@ -262,7 +262,7 @@ export const LESSONS = {
         size: "9.7 MB",
       },
       {
-        name: " شخصيات و مصطلحات التاريخ الفصل الأول",
+        name: " شخصيات و مصطلحات لتاريخ الفصل الأول",
         file: "https://drive.google.com/file/d/1JoaAP_Tp0vgYUqP1i7Bohz_lVovwtTOz/view?usp=drive_link",
         size: "33.33 MB",
       },
