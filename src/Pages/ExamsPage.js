@@ -28,6 +28,15 @@ function buildExams(levels, resources) {
   return out;
 }
 
+/** Subject name → { color, icon } from the DB (subjects.color is a hex string). */
+function buildSubjectMeta(levels) {
+  const meta = {};
+  levels.forEach((l) => (l.subjects || []).forEach((sub) => {
+    meta[sub.name] = { color: sub.color, icon: sub.icon };
+  }));
+  return meta;
+}
+
 // Enhanced animation variants
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -59,6 +68,7 @@ const staggerItem = {
 
 export default function ExamsPage() {
   const [exams, setExams] = useState({});
+  const [meta, setMeta] = useState({});
   const [status, setStatus] = useState("loading"); // loading | ready | error
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
@@ -75,6 +85,7 @@ export default function ExamsPage() {
         ]);
         const built = buildExams(levels, res.data);
         setExams(built);
+        setMeta(buildSubjectMeta(levels));
         const first = Object.keys(built)[0] || null;
         setSelectedLevel(first);
         setSelectedSubject(first ? Object.keys(built[first])[0] || null : null);
@@ -102,41 +113,9 @@ export default function ExamsPage() {
     (f) => f.name.toLowerCase().includes(search.toLowerCase()) || search === "",
   ));
 
-  // Get subject color based on name
-  const getSubjectColor = (subject) => {
-    const colors = {
-      الرياضيات: "primary",
-      الفيزياء: "info",
-      العلوم: "success",
-      "اللغة العربية": "warning",
-      "اللغة الفرنسية": "danger",
-      "اللغة الإنجليزية": "info",
-      "التاريخ والجغرافيا": "secondary",
-      "التربية الإسلامية": "success",
-      "التربية المدنية": "warning",
-      الفلسفة: "purple",
-      "علوم الاقتصاد": "teal",
-    };
-    return colors[subject] || "primary";
-  };
-
-  // Get subject icon based on name
-  const getSubjectIcon = (subject) => {
-    const icons = {
-      الرياضيات: "bi-calculator-fill",
-      الفيزياء: "bi-magnet-fill",
-      العلوم: "bi-flask-fill",
-      "اللغة العربية": "bi-book-fill",
-      "اللغة الفرنسية": "bi-chat-fill",
-      "اللغة الإنجليزية": "bi-chat-dots-fill",
-      "التاريخ والجغرافيا": "bi-globe-americas",
-      "التربية الإسلامية": "bi-star-fill",
-      "التربية المدنية": "bi-people-fill",
-      الفلسفة: "bi-gem-fill",
-      "علوم الاقتصاد": "bi-graph-up",
-    };
-    return icons[subject] || "bi-journal-bookmark-fill";
-  };
+  // Subject color / icon come from the DB (set in the admin Settings screen)
+  const getSubjectColor = (subject) => meta[subject]?.color || "#4f46e5";
+  const getSubjectIcon = (subject) => meta[subject]?.icon || "bi-journal-bookmark-fill";
 
   // Get exam type badge
   const getExamTypeBadge = (type) => {
@@ -332,8 +311,8 @@ export default function ExamsPage() {
                         whileHover={{ x: 5 }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        <div className={`subject-icon bg-${color}-subtle`}>
-                          <i className={`bi ${icon} text-${color}`}></i>
+                        <div className="subject-icon" style={{ background: `${color}1f` }}>
+                          <i className={`bi ${icon}`} style={{ color }}></i>
                         </div>
                         <div className="subject-info">
                           <span className="subject-name">{subj}</span>
@@ -372,13 +351,15 @@ export default function ExamsPage() {
               <div className="files-header">
                 <div className="header-info">
                   <motion.div
-                    className={`subject-badge bg-${getSubjectColor(selectedSubject)}-subtle`}
+                    className="subject-badge"
+                    style={{ background: `${getSubjectColor(selectedSubject)}1f` }}
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", stiffness: 200 }}
                   >
                     <i
-                      className={`bi ${getSubjectIcon(selectedSubject)} text-${getSubjectColor(selectedSubject)}`}
+                      className={`bi ${getSubjectIcon(selectedSubject)}`}
+                      style={{ color: getSubjectColor(selectedSubject) }}
                     ></i>
                   </motion.div>
                   <div>
