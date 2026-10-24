@@ -1,118 +1,185 @@
-// pages/ActivitiesPage.js
+// pages/ActivitiesPage.js — public feed of published announcements (النشاطات والإعلانات)
+import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "../components/PageHeader";
-//import { ACTIVITIES } from "../Data/constants";
-import { BI } from "../Utils/icons";
+import { getPublicAnnouncements } from "../api/services";
+
+const AUDIENCE = {
+  all:      { label: "إعلان عام",   color: "#4f46e5", icon: "bi-megaphone-fill" },
+  students: { label: "للتلاميذ",    color: "#0ea5e9", icon: "bi-mortarboard-fill" },
+  parents:  { label: "للأولياء",    color: "#10b981", icon: "bi-people-fill" },
+};
+const FILTERS = [{ id: "all-items", label: "الكل" }, ...Object.entries(AUDIENCE).map(([id, v]) => ({ id, label: v.label }))];
+const LONG = 220; // chars before a card collapses its text
+
+const fmtDate = (iso) => {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleDateString("ar-DZ", { year: "numeric", month: "long", day: "numeric" });
+  } catch { return iso.substring(0, 10); }
+};
+
+function AnnouncementCard({ a, index }) {
+  const meta = AUDIENCE[a.audience] || AUDIENCE.all;
+  const [open, setOpen] = useState(false);
+  const long = a.body.length > LONG;
+  const text = long && !open ? a.body.slice(0, LONG).trimEnd() + "…" : a.body;
+
+  return (
+    <motion.article
+      layout
+      className="ann-card"
+      style={{ "--accent": meta.color }}
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.97 }}
+      transition={{ type: "spring", stiffness: 110, damping: 16, delay: Math.min(index, 8) * 0.04 }}
+    >
+      <div className="ann-top">
+        <span className="ann-chip"><i className={`bi ${meta.icon}`} />{meta.label}</span>
+        <time className="ann-date"><i className="bi bi-calendar-event" />{fmtDate(a.published_at)}</time>
+      </div>
+      <h3 className="ann-title">{a.title}</h3>
+      <p className="ann-body">{text}</p>
+      <div className="ann-foot">
+        {a.author_name && <span className="ann-author"><i className="bi bi-person-circle" />{a.author_name}</span>}
+        {long && (
+          <button className="ann-more" onClick={() => setOpen((v) => !v)}>
+            {open ? "عرض أقل" : "قراءة المزيد"}
+            <i className={`bi ${open ? "bi-chevron-up" : "bi-chevron-down"}`} />
+          </button>
+        )}
+      </div>
+    </motion.article>
+  );
+}
 
 export default function ActivitiesPage() {
-  //const [filter, setFilter] = useState("الكل");
- // const categories = ["الكل", ...new Set(ACTIVITIES.map((a) => a.category))];
+  const [items, setItems] = useState([]);
+  const [status, setStatus] = useState("loading"); // loading | ready | error
+  const [filter, setFilter] = useState("all-items");
 
- // const filtered =
-   // filter === "الكل"
-   // /  ? ACTIVITIES
-     // : ACTIVITIES.filter((a) => a.category === filter);
+  useEffect(() => {
+    getPublicAnnouncements()
+      .then((rows) => { setItems(rows); setStatus("ready"); })
+      .catch(() => setStatus("error"));
+  }, []);
+
+  const shown = useMemo(
+    () => (filter === "all-items" ? items : items.filter((a) => a.audience === filter)),
+    [items, filter]
+  );
 
   return (
     <>
       <PageHeader
-        icon="bi-calendar-event-fill"
-        title="النشاطات والفعاليات"
-        sub="آخر الأخبار والأنشطة المدرسية للعام الدراسي 2025/2026"
+        icon="bi-megaphone-fill"
+        title="النشاطات والإعلانات"
+        sub="آخر الأخبار والإعلانات الرسمية للثانوية"
       />
 
-      <div className="container py-5">
-        {/* Development Notice */}
-        <div className="row justify-content-center">
-          <div className="col-md-8 col-lg-6">
-            <div 
-              className="text-center py-5 px-4 bg-light rounded-4 shadow-sm"
-              data-aos="fade-up"
-            >
-              <BI 
-                icon="bi-braces" 
-                className="display-1 text-warning mb-4" 
-                style={{ fontSize: "4rem" }}
-                marginEnd="me-0" 
-              />
-              <h2 className="h3 fw-bold mb-3">⚠️ الصفحة قيد التطوير</h2>
-              <p className="text-secondary mb-0">
-                نحن نعمل على تحسين هذه الصفحة ، سيتم إضافة المحتوى قريباً إن شاء الله
-              </p>
-            </div>
+      <div className="container py-5 ann-wrap" dir="rtl">
+        {status === "ready" && items.length > 0 && (
+          <div className="ann-filters" role="tablist" aria-label="تصفية الإعلانات">
+            {FILTERS.map((f) => (
+              <button
+                key={f.id}
+                role="tab"
+                aria-selected={filter === f.id}
+                className={`ann-filter${filter === f.id ? " active" : ""}`}
+                onClick={() => setFilter(f.id)}
+              >
+                {f.label}
+              </button>
+            ))}
           </div>
-        </div>
-        {/* Filter
-          <div
-          className="d-flex align-items-center justify-content-center gap-2 flex-wrap mb-5"
-          data-aos="fade-up"
-        >
-          <BI
-            icon="bi-funnel-fill"
-            className="fs-4 text-primary"
-            marginEnd="me-0"
-          />
-          {categories.map((cat, index) => (
-            <button
-              key={cat}
-              onClick={() => setFilter(cat)}
-              className={`btn ${filter === cat ? "btn-primary" : "btn-outline-secondary"} rounded-pill px-4`}
-              data-aos="fade-right"
-              data-aos-delay={index * 50}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        )}
 
-        <div className="row g-4">
-          {filtered.map((act, index) => (
-            <div
-              className="col-md-6 col-lg-4"
-              key={act.id}
-              data-aos="fade-up"
-              data-aos-delay={index * 100}
-            >
-              <div className="card h-100 border-0 shadow-sm hover-shadow-lg">
-                <div className="card-body p-4">
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <BI
-                      icon={act.icon}
-                      className="fs-1"
-                      style={{ color: act.color, fontSize: "2.5rem" }}
-                      marginEnd="me-0"
-                    />
-                    <span
-                      className="badge px-3 py-2 rounded-pill"
-                      style={{ background: act.color + "22", color: act.color }}
-                    >
-                      {act.category}
-                    </span>
-                  </div>
-                  <h3 className="h5 fw-bold mb-3">{act.title}</h3>
-                  <p className="text-secondary small mb-4 lh-base">
-                    {act.desc}
-                  </p>
-                  <div className="d-flex align-items-center text-secondary small gap-2">
-                    <BI icon="bi-calendar-event-fill" marginEnd="me-0" />
-                    <span>{act.date}</span>
-                  </div>
-                </div>
-                <div className="card-footer bg-transparent border-0 pt-0 pb-4">
-                  <div
-                    style={{
-                      height: "4px",
-                      background: act.color,
-                      borderRadius: "2px",
-                    }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-         */}
-      
+        {status === "loading" && (
+          <div className="ann-grid">
+            {[0, 1, 2].map((i) => <div key={i} className="ann-skeleton" />)}
+          </div>
+        )}
+
+        {status === "error" && (
+          <div className="ann-state">
+            <i className="bi bi-wifi-off" />
+            <p>تعذّر تحميل الإعلانات. حاول مرة أخرى لاحقاً.</p>
+            <button className="ann-more" onClick={() => window.location.reload()}>إعادة المحاولة</button>
+          </div>
+        )}
+
+        {status === "ready" && shown.length === 0 && (
+          <div className="ann-state">
+            <i className="bi bi-inbox" />
+            <p>{items.length === 0 ? "لا توجد إعلانات حالياً." : "لا توجد إعلانات في هذا التصنيف."}</p>
+          </div>
+        )}
+
+        {status === "ready" && shown.length > 0 && (
+          <div className="ann-grid">
+            <AnimatePresence mode="popLayout">
+              {shown.map((a, i) => <AnnouncementCard key={a.id} a={a} index={i} />)}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
+
+      <style>{`
+        .ann-wrap { max-width: 1100px; }
+        .ann-filters { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
+        .ann-filter {
+          border: 1.5px solid #e2e8f0; background: #fff; color: #475569;
+          padding: 8px 20px; border-radius: 999px; font-weight: 600; font-size: .9rem;
+          font-family: inherit; cursor: pointer; transition: all .2s;
+        }
+        .ann-filter:hover { border-color: #1e3a5f; color: #1e3a5f; }
+        .ann-filter.active { background: #1e3a5f; border-color: #1e3a5f; color: #fff; box-shadow: 0 6px 16px rgba(30,58,95,.25); }
+
+        .ann-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 22px; }
+        .ann-card {
+          position: relative; background: #fff; border-radius: 18px; padding: 22px 22px 18px;
+          box-shadow: 0 2px 12px rgba(15,23,42,.06); border: 1px solid #eef2f7;
+          display: flex; flex-direction: column; overflow: hidden; transition: box-shadow .25s, transform .25s;
+        }
+        .ann-card::before { content: ""; position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 5px; background: var(--accent); }
+        .ann-card:hover { box-shadow: 0 14px 32px rgba(15,23,42,.12); transform: translateY(-3px); }
+        .ann-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+        .ann-chip {
+          display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 700;
+          padding: 5px 12px; border-radius: 999px; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, white);
+        }
+        .ann-date { font-size: .8rem; color: #64748b; display: inline-flex; gap: 6px; align-items: center; }
+        .ann-title { font-size: 1.12rem; font-weight: 800; color: #0f172a; line-height: 1.5; margin: 0 0 10px; }
+        .ann-body { color: #475569; font-size: .95rem; line-height: 1.9; white-space: pre-wrap; margin: 0 0 16px; flex: 1; overflow-wrap: anywhere; }
+        .ann-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px dashed #e2e8f0; padding-top: 12px; }
+        .ann-author { font-size: .82rem; color: #64748b; display: inline-flex; gap: 6px; align-items: center; }
+        .ann-more {
+          border: 0; background: transparent; color: var(--accent, #1e3a5f); font-weight: 700; font-size: .85rem;
+          font-family: inherit; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; margin-inline-start: auto;
+        }
+        .ann-more:hover { text-decoration: underline; }
+
+        .ann-skeleton {
+          height: 210px; border-radius: 18px;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e8edf4 37%, #f1f5f9 63%); background-size: 400% 100%;
+          animation: ann-shimmer 1.4s ease infinite;
+        }
+        @keyframes ann-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+        .ann-state { text-align: center; color: #64748b; padding: 56px 16px; }
+        .ann-state i { font-size: 3rem; color: #94a3b8; display: block; margin-bottom: 12px; }
+        .ann-state p { margin-bottom: 14px; }
+
+        @media (max-width: 575.98px) {
+          .ann-grid { grid-template-columns: 1fr; }
+          .ann-card { padding: 18px 16px 14px; }
+          .ann-wrap { padding-bottom: 96px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ann-card, .ann-skeleton { transition: none; animation: none; }
+        }
+      `}</style>
     </>
   );
 }

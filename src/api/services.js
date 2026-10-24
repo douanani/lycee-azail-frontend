@@ -480,4 +480,19 @@ export async function getTimetableOverview() {
       .order("id")
   );
   return { year, classrooms, slots };
+
+  
 }
+
+export const PUBLIC_AUDIENCES = ["all", "students", "parents"];
+export const getPublicAnnouncements = async () =>
+  unwrap(
+    await supabase
+      .from("announcements")
+      .select("id,title,body,audience,author_name,published_at,expires_at")
+      .eq("is_published", true)
+      .in("audience", PUBLIC_AUDIENCES)
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .limit(60)
+  );
