@@ -1,5 +1,6 @@
 // pages/AuthPage.js
 import { useState } from "react";
+import { getDashboardPath } from "../api/rolePaths";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { SCHOOL_NAME } from "../Data/constants";
@@ -96,9 +97,7 @@ export default function AuthPage() {
       setSuccess(true);
 
       setTimeout(() => {
-        if (user.role === "admin") navigate("/admin");
-        else if (user.role === "teacher") navigate("/teacher");
-        else navigate("/");
+        navigate(getDashboardPath(user.role));
       }, 1200);
     } catch (err) {
       setError(err.message || "حدث خطأ غير متوقع. حاول مرة أخرى.");

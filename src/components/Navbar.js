@@ -4,17 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { SCHOOL_NAME } from "../Data/constants";
 import { BI } from "../Utils/icons";
 import { logout, getCurrentProfile } from "../api/services";
-
-function getDashboardPath(role) {
-  const paths = {
-    admin:       "/admin",
-    teacher:     "/teacher",
-    counselor:   "/counselor",
-    admin_staff: "/admin-staff",
-    supervisor:  "/supervisor",
-  };
-  return paths[role] || "/dashboard";
-}
+import { getDashboardPath } from "../api/rolePaths";
 
 function getInitials(name = "") {
   const parts = name.trim().split(/\s+/);

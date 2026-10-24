@@ -16,6 +16,8 @@ import ExamsPage from "./Pages/ExamsPage";
 import AuthPage from "./Pages/Authpage";
 import AdminDashboard from "./Pages/Admin Dashboard/AdminDashboard";
 import TeacherDashboard from "./Pages/TeacherDashboard";
+import StaffDashboard from "./Pages/StaffDashboard";
+import AccountPage from "./Pages/AccountPage";
 
 
 // Import global styles
@@ -71,6 +73,10 @@ function AnimatedRoutes() {
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/teacher" element={<TeacherDashboard />} />
+          <Route path="/counselor" element={<StaffDashboard role="counselor" />} />
+          <Route path="/admin-staff" element={<StaffDashboard role="admin_staff" />} />
+          <Route path="/supervisor" element={<StaffDashboard role="supervisor" />} />
+          <Route path="/account" element={<AccountPage />} />
           {/* Fallback */}
           <Route path="*" element={<HomePage />} />
         </Routes>
