@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "../components/PageHeader";
-import { HOURS, DAYS, SUBJECT_COLORS, SUBJECT_ICONS } from "../Data/constants";
+import { HOURS, DAYS } from "../Data/constants";
 import { getTimetableOverview } from "../api/services";
 
 const DAY_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
@@ -14,7 +14,7 @@ function buildTimetable({ classrooms, slots }) {
   const label = (c) => (names.filter((n) => n === c.name).length > 1 ? `${c.grade_level?.name || ""} ${c.name}`.trim() : c.name);
   const hourIdx = Object.fromEntries(HOURS.map((h, i) => [pad(h), i]));
   const out = {};
-  const icons = {};
+  const meta = {}; // subject name → { color, icon } straight from the DB
   const byId = {};
   classrooms.forEach((c) => {
     const grid = {};
@@ -28,14 +28,14 @@ function buildTimetable({ classrooms, slots }) {
     const hi = hourIdx[pad(sl.start_time)];
     if (!grid || di < 0 || hi === undefined || sl.is_break || !sl.subject) return;
     grid[DAYS[di]][hi] = sl.subject.name;
-    if (sl.subject.icon) icons[sl.subject.name] = sl.subject.icon;
+    meta[sl.subject.name] = { color: sl.subject.color, icon: sl.subject.icon };
   });
-  return { data: out, icons };
+  return { data: out, meta };
 }
 
 
 export default function TimetablePage() {
-  const [tt, setTt] = useState({ data: {}, icons: {}, year: null });
+  const [tt, setTt] = useState({ data: {}, meta: {}, year: null });
   const [status, setStatus] = useState("loading"); // loading | ready | error
   const classes = Object.keys(tt.data);
   const [selected, setSelected] = useState(null);
@@ -62,25 +62,9 @@ export default function TimetablePage() {
     setCurrentDay(today >= 0 && today <= 4 ? days[today] : days[0]);
   }, []);
 
-  const getSubjectIcon = (subject) => {
-    return SUBJECT_ICONS[subject] || tt.icons[subject] || "bi-book-fill";
-  };
+  const getSubjectIcon = (subject) => tt.meta[subject]?.icon || "bi-book-fill";
 
- // const getBadgeClass = (subject) => {
-    //return SUBJECT_COLORS[subject] || "secondary";
-  //};
-
-  const getSubjectColorStyle = (subject) => {
-    const colorMap = {
-      "primary": "#4f46e5",
-      "success": "#10b981",
-      "danger": "#ef4444",
-      "warning": "#f59e0b",
-      "info": "#06b6d4",
-      "secondary": "#6b7280",
-    };
-    return colorMap[SUBJECT_COLORS[subject]] || "#6b7280";
-  };
+  const getSubjectColorStyle = (subject) => tt.meta[subject]?.color || "#6b7280";
 
   // Animation variants
   const containerVariants = {
@@ -535,7 +519,7 @@ export default function TimetablePage() {
               <span>دليل المواد</span>
             </div>
             <div className="legend-items">
-              {Object.entries(SUBJECT_COLORS).map(([subject, colorClass]) => {
+              {Object.keys(tt.meta).map((subject) => {
                 const iconClass = getSubjectIcon(subject);
                 const colorStyle = getSubjectColorStyle(subject);
                 return (

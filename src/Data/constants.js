@@ -844,39 +844,3 @@ export const HOURS = [
   "16:00",
 ];
 export const DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
-
-export const SUBJECT_COLORS = {
-  رياضيات: "primary",
-  فيزياء: "info",
-  "علوم طبيعية": "success",
-  "لغة عربية": "warning",
-  فلسفة: "dark",
-  تاريخ: "danger",
-  جغرافيا: "secondary",
-  "لغة فرنسية": "primary",
-  "لغة إنجليزية": "info",
-  "تربية إسلامية": "success",
-  "تربية بدنية": "danger",
-  معلوماتية: "dark",
-  تكنولوجيا: "secondary",
-  "تربية فنية": "warning",
-
-  "—": "secondary",
-};
-
-export const SUBJECT_ICONS = {
-  رياضيات: "bi-calculator-fill",
-  فيزياء: "bi-lightbulb-fill",
-  "علوم طبيعية": "bi-flower1",
-  "لغة عربية": "bi-chat-right-text-fill",
-  فلسفة: "bi bi-clipboard2",
-  تاريخ: "bi-clock-history",
-  جغرافيا: "bi-globe2",
-  "لغة فرنسية": "bi-translate",
-  "لغة إنجليزية": "bi-translate",
-  "تربية إسلامية": "bi-book",
-  "تربية بدنية": "bi-dribbble",
-  معلوماتية: "bi-cpu",
-  تكنولوجيا: "bi-gear-fill",
-  "تربية فنية": "bi-palette-fill",
-};
