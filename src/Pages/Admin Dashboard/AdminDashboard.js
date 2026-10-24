@@ -10,6 +10,7 @@ import {
   getGradeLevels, getSubjects, getAcademicYears, errMsg,
 } from "../../api/services";
 import useAuthGuard from "../../api/useAuthGuard";
+import MobileDashNav, { useTableLabels } from "../MobileDashNav";
 
 // ─── Layout components ─────────────────────────────────────────────────────────
 import AdminSidebar from "./AdminSidebar";
@@ -32,6 +33,7 @@ import { motion } from "framer-motion";
 // ══════════════════════════════════════════════════════════════════════════════
 export default function AdminDashboard() {
   const adminUser = useAuthGuard(["admin"]);
+  useTableLabels(); // must stay above the early return (hook order)
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState("overview");
@@ -355,6 +357,23 @@ export default function AdminDashboard() {
         gradeLevels={gradeLevels}
         subjects={subjects}
         academicYears={academicYears}
+      />
+
+      {/* ── Mobile bottom nav (sidebar is hidden <=991px) ── */}
+      <MobileDashNav
+        items={[
+          { id: "overview",      label: "الرئيسية",  icon: "bi-grid-1x2-fill" },
+          { id: "resources",     label: "الموارد",   icon: "bi-journal-bookmark-fill" },
+          { id: "users",         label: "المستخدمون", icon: "bi-people-fill" },
+          { id: "announcements", label: "الإعلانات", icon: "bi-megaphone-fill" },
+        ]}
+        moreItems={[
+          { id: "timetable", label: "جداول الحصص",    icon: "bi-calendar-week-fill" },
+          { id: "settings",  label: "إعدادات النظام", icon: "bi-gear-fill" },
+        ]}
+        active={activeSection}
+        onSelect={setActiveSection}
+        accent="#4f46e5"
       />
 
       {/* ── Styles (unchanged from original) ── */}
