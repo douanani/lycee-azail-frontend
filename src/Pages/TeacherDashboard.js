@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
-  getResources, uploadResource, deleteResource, downloadResource,
+  getResources, uploadResource, updateResource, deleteResource, downloadResource,
   getAnnouncements, getGradeLevels, getSubjects, getAcademicYears,
   getNotifications, markNotificationRead, markAllNotificationsRead,
   logout, errMsg,
@@ -112,6 +112,12 @@ export default function TeacherDashboard() {
     academic_year_id: "", semester: "الفصل الأول", description: "", file: null,
   });
 
+  // file | link (external https URL), upload progress %, and the edit-modal form
+  const [sourceMode, setSourceMode] = useState("file");
+  const [externalUrl, setExternalUrl] = useState("");
+  const [uploadPct, setUploadPct]     = useState(null);
+  const [editForm, setEditForm]       = useState(null);
+
   // ── filters ────────────────────────────────────────────────────────────────
   const [typeFilter, setTypeFilter]     = useState("all");
   const [searchQuery, setSearchQuery]   = useState("");
@@ -192,18 +198,68 @@ export default function TeacherDashboard() {
 
   // ── upload resource ────────────────────────────────────────────────────────
   const handleUpload = async () => {
-    if (!form.title || !form.subject_id || !form.grade_level_id || !form.file) {
-      showToast("يرجى ملء جميع الحقول المطلوبة وتحديد الملف", "error"); return;
+    const url = externalUrl.trim();
+    if (!form.title || !form.subject_id || !form.grade_level_id) {
+      showToast("يرجى ملء جميع الحقول المطلوبة", "error"); return;
+    }
+    if (sourceMode === "file" && !form.file) { showToast("حدّد الملف المراد رفعه", "error"); return; }
+    if (sourceMode === "link" && !/^https:\/\/\S+$/i.test(url)) {
+      showToast("أدخل رابطاً صحيحاً يبدأ بـ https://", "error"); return;
     }
     setSub(true);
+    setUploadPct(sourceMode === "file" ? 0 : null);
     try {
       const { file, ...meta } = form;
-      await uploadResource({ file, meta });
-      showToast("✅ تم رفع الملف بنجاح");
+      await uploadResource(
+        sourceMode === "file"
+          ? { file, meta, onProgress: setUploadPct }
+          : { externalUrl: url, meta }
+      );
+      showToast("✅ تم حفظ المورد بنجاح");
       setForm(p => ({ ...p, title: "", description: "", file: null }));
+      setExternalUrl("");
       setActive("myresources");
     } catch (err) {
       showToast(errMsg(err, "فشل رفع الملف"), "error");
+    } finally { setSub(false); setUploadPct(null); }
+  };
+
+  // ── publish / unpublish ────────────────────────────────────────────────────
+  const togglePublish = async (r) => {
+    try {
+      await updateResource(r.id, { is_published: !r.is_published });
+      showToast(r.is_published ? "أُخفي المورد عن الموقع (مسودة)" : "تم نشر المورد");
+      fetchMyResources();
+    } catch (err) {
+      showToast(errMsg(err, "فشل تغيير حالة النشر"), "error");
+    }
+  };
+
+  // ── edit resource metadata (file itself can't be replaced: delete + re-upload) ──
+  const openEdit = (r) => {
+    setEditForm({
+      id: r.id, title: r.title || "", description: r.description || "", type: r.type,
+      subject_id: String(r.subject_id ?? r.subject?.id ?? ""),
+      grade_level_id: String(r.grade_level_id ?? r.grade_level?.id ?? ""),
+      academic_year_id: String(r.academic_year_id ?? ""),
+      semester: r.semester || semesterOptions[0],
+    });
+    setModal({ type: "edit" });
+  };
+
+  const saveEdit = async () => {
+    if (!editForm.title.trim() || !editForm.subject_id || !editForm.grade_level_id) {
+      showToast("العنوان والمادة والمستوى مطلوبة", "error"); return;
+    }
+    setSub(true);
+    try {
+      const { id, ...fields } = editForm;
+      await updateResource(id, { ...fields, title: fields.title.trim() });
+      showToast("تم حفظ التعديلات");
+      setModal(null);
+      fetchMyResources();
+    } catch (err) {
+      showToast(errMsg(err, "فشل حفظ التعديلات"), "error");
     } finally { setSub(false); }
   };
 
@@ -538,7 +594,10 @@ export default function TeacherDashboard() {
                           </span>
                         </div>
                         <div className="td-res-card-body">
-                          <h6 className="td-res-card-title">{r.title}</h6>
+                          <h6 className="td-res-card-title">
+                            {r.title}
+                            {!r.is_published && <span className="td-draft-pill">مسودة</span>}
+                          </h6>
                           <p className="td-res-card-meta">
                             <i className="bi bi-book me-1" />{r.subject?.name || "—"}
                           </p>
@@ -552,6 +611,13 @@ export default function TeacherDashboard() {
                         <div className="td-res-card-foot">
                           <button className="td-card-btn view" onClick={() => downloadResource(r.id).catch(e => showToast(errMsg(e), "error"))}>
                             <i className="bi bi-eye-fill me-1" />فتح
+                          </button>
+                          <button className="td-card-btn edit" onClick={() => openEdit(r)} title="تعديل" aria-label="تعديل">
+                            <i className="bi bi-pencil-fill" />
+                          </button>
+                          <button className="td-card-btn pub" onClick={() => togglePublish(r)}
+                            title={r.is_published ? "إخفاء (مسودة)" : "نشر"} aria-label={r.is_published ? "إخفاء" : "نشر"}>
+                            <i className={`bi ${r.is_published ? "bi-eye-slash-fill" : "bi-send-fill"}`} />
                           </button>
                           <button className="td-card-btn del" onClick={() => handleDelete(r.id)}>
                             <i className="bi bi-trash3-fill" />
@@ -657,7 +723,36 @@ export default function TeacherDashboard() {
                         onChange={e => setForm(p => ({ ...p, description: e.target.value }))} />
                     </div>
 
-                    {/* الملف */}
+                    {/* مصدر المورد */}
+                    <div className="td-field full">
+                      <label>مصدر المورد</label>
+                      <div className="td-type-tabs">
+                        <button type="button" className={`td-type-tab ${sourceMode === "file" ? "active" : ""}`}
+                          style={sourceMode === "file" ? { background: "#6366f1", color: "white", borderColor: "#6366f1" } : {}}
+                          onClick={() => setSourceMode("file")}>
+                          <i className="bi bi-file-earmark-arrow-up" />رفع ملف
+                        </button>
+                        <button type="button" className={`td-type-tab ${sourceMode === "link" ? "active" : ""}`}
+                          style={sourceMode === "link" ? { background: "#6366f1", color: "white", borderColor: "#6366f1" } : {}}
+                          onClick={() => setSourceMode("link")}>
+                          <i className="bi bi-link-45deg" />رابط خارجي
+                        </button>
+                      </div>
+                    </div>
+
+                    {sourceMode === "link" && (
+                      <div className="td-field full">
+                        <label>الرابط <span className="req">*</span> <span className="td-hint">(يجب أن يبدأ بـ https://)</span></label>
+                        <div className="td-input-wrap">
+                          <i className="bi bi-link-45deg td-fi" />
+                          <input type="url" dir="ltr" placeholder="https://..." value={externalUrl}
+                            onChange={e => setExternalUrl(e.target.value)} />
+                        </div>
+                        <span className="td-hint">تأكد أن الرابط عام (مثلاً «أي شخص لديه الرابط» في Google Drive)، وإلا لن يفتحه التلاميذ.</span>
+                      </div>
+                    )}
+
+                    {sourceMode === "file" && (
                     <div className="td-field full">
                       <label>الملف <span className="req">*</span> <span className="td-hint">(PDF, Word, PPT — حد أقصى 50MB)</span></label>
                       <label className="td-dropzone" htmlFor="teacher-file">
@@ -679,15 +774,22 @@ export default function TeacherDashboard() {
                         accept=".pdf,.doc,.docx,.ppt,.pptx"
                         onChange={e => setForm(p => ({ ...p, file: e.target.files[0] || null }))} />
                     </div>
+                    )}
                   </div>
 
+                  {uploadPct !== null && (
+                    <div className="td-progress" role="progressbar" aria-valuenow={uploadPct} aria-valuemin={0} aria-valuemax={100}>
+                      <div className="td-progress-bar" style={{ width: `${uploadPct}%` }} />
+                      <span>{uploadPct}%</span>
+                    </div>
+                  )}
                   <div className="td-form-actions">
                     <button className="td-cancel-btn" onClick={() => setActive("myresources")}>إلغاء</button>
                     <button className="td-submit-btn" onClick={handleUpload} disabled={submitting}>
                       {submitting ? (
-                        <><span className="td-spin" /> جاري الرفع...</>
+                        <><span className="td-spin" /> {uploadPct !== null ? `جاري الرفع ${uploadPct}%` : "جاري الحفظ..."}</>
                       ) : (
-                        <><i className="bi bi-cloud-upload-fill me-2" />رفع الملف</>
+                        <><i className="bi bi-cloud-upload-fill me-2" />{sourceMode === "file" ? "رفع الملف" : "حفظ الرابط"}</>
                       )}
                     </button>
                   </div>
@@ -817,6 +919,83 @@ export default function TeacherDashboard() {
                   </button>
                 </div>
               ))}
+            </div>
+          </>
+        )}
+      </Modal>
+
+      {/* ── Edit resource Modal ── */}
+      <Modal show={modal?.type === "edit" && !!editForm} onClose={() => setModal(null)} title="تعديل المورد">
+        {editForm && (
+          <>
+            <div className="td-form-grid">
+              <div className="td-field full">
+                <label>العنوان <span className="req">*</span></label>
+                <div className="td-input-wrap">
+                  <i className="bi bi-journal-text td-fi" />
+                  <input type="text" value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} />
+                </div>
+              </div>
+              <div className="td-field full">
+                <label>النوع</label>
+                <div className="td-type-tabs">
+                  {Object.entries(typeConfig).map(([k, v]) => (
+                    <button key={k} type="button" className={`td-type-tab ${editForm.type === k ? "active" : ""}`}
+                      style={editForm.type === k ? { background: v.color, color: "white", borderColor: v.color } : {}}
+                      onClick={() => setEditForm(p => ({ ...p, type: k }))}>
+                      <i className={`bi ${v.icon}`} />{v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="td-field">
+                <label>المادة <span className="req">*</span></label>
+                <div className="td-input-wrap">
+                  <i className="bi bi-book td-fi" />
+                  <select value={editForm.subject_id} onChange={e => setEditForm(p => ({ ...p, subject_id: e.target.value }))}>
+                    <option value="">-- اختر المادة --</option>
+                    {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="td-field">
+                <label>المستوى <span className="req">*</span></label>
+                <div className="td-input-wrap">
+                  <i className="bi bi-mortarboard td-fi" />
+                  <select value={editForm.grade_level_id} onChange={e => setEditForm(p => ({ ...p, grade_level_id: e.target.value }))}>
+                    <option value="">-- اختر المستوى --</option>
+                    {gradeLevels.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="td-field">
+                <label>الفصل</label>
+                <div className="td-input-wrap">
+                  <i className="bi bi-calendar3 td-fi" />
+                  <select value={editForm.semester} onChange={e => setEditForm(p => ({ ...p, semester: e.target.value }))}>
+                    {semesterOptions.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="td-field">
+                <label>السنة الدراسية</label>
+                <div className="td-input-wrap">
+                  <i className="bi bi-calendar-check td-fi" />
+                  <select value={editForm.academic_year_id} onChange={e => setEditForm(p => ({ ...p, academic_year_id: e.target.value }))}>
+                    {academicYears.map(y => <option key={y.id} value={y.id}>{y.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="td-field full">
+                <label>الوصف</label>
+                <textarea rows={3} value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} />
+              </div>
+            </div>
+            <div className="td-form-actions">
+              <button className="td-cancel-btn" onClick={() => setModal(null)}>إلغاء</button>
+              <button className="td-submit-btn" onClick={saveEdit} disabled={submitting}>
+                {submitting ? <><span className="td-spin" /> جاري الحفظ...</> : <><i className="bi bi-check2-circle me-2" />حفظ</>}
+              </button>
             </div>
           </>
         )}
@@ -1140,6 +1319,20 @@ export default function TeacherDashboard() {
         .td-card-btn.view { background: #eef2ff; color: #6366f1; }
         .td-card-btn.del  { background: #fff1f2; color: #f43f5e; max-width: 36px; flex: 0; }
         .td-card-btn:hover { filter: brightness(0.9); transform: scale(1.03); }
+        .td-card-btn.edit { background: #fffbeb; color: #d97706; max-width: 36px; flex: 0; }
+        .td-card-btn.pub  { background: #ecfdf5; color: #059669; max-width: 36px; flex: 0; }
+        .td-draft-pill {
+          display: inline-block; margin-inline-start: 8px; padding: 2px 9px; border-radius: 999px;
+          font-size: .68rem; font-weight: 700; background: #fef3c7; color: #b45309; vertical-align: middle;
+        }
+        .td-progress {
+          position: relative; height: 22px; border-radius: 999px; background: #eef2ff; overflow: hidden; margin-bottom: 16px;
+        }
+        .td-progress-bar { height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); transition: width .2s ease; }
+        .td-progress span {
+          position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+          font-size: .75rem; font-weight: 700; color: #312e81;
+        }
 
         /* upload form */
         .td-upload-wrap { display: flex; justify-content: center; }
