@@ -299,12 +299,28 @@ function putWithProgress(url, file, contentType, onProgress) {
 }
 
 /**
- * meta: { title, description, type, grade_level_id, subject_id, academic_year_id, semester }
+ * meta: { title, description, type, subject_id, academic_year_id, semester }
+ * gradeLevelIds: one or more levels. The file is uploaded to R2 ONCE and one `resources`
+ * row per level is inserted (single INSERT = all-or-nothing). Rows share the same file_key,
+ * which is why delete-resource only removes the R2 object when the last row is gone.
+ * (Legacy: a single `meta.grade_level_id` still works when gradeLevelIds is omitted.)
  * Either `file` (→ Cloudflare R2) or `externalUrl` (https only).
  */
-export async function uploadResource({ file, externalUrl, meta, onProgress }) {
+export async function uploadResource({ file, externalUrl, meta, gradeLevelIds, onProgress }) {
   const uid = await currentUserId();
   if (!uid) throw new Error("غير مسجّل الدخول");
+
+  // Validate BEFORE uploading so a bad selection never leaves an orphan object in R2.
+  const levels = [
+    ...new Set(
+      (gradeLevelIds?.length ? gradeLevelIds : [meta?.grade_level_id])
+        .filter((v) => v !== "" && v != null)
+        .map(Number)
+    ),
+  ];
+  if (!levels.length || levels.some((n) => !Number.isInteger(n) || n <= 0)) {
+    throw new Error("اختر مستوىً واحداً على الأقل");
+  }
 
   let fileFields = {};
   if (file) {
@@ -322,12 +338,10 @@ export async function uploadResource({ file, externalUrl, meta, onProgress }) {
     throw new Error("اختر ملفاً أو أدخل رابطاً");
   }
 
-  const clean = Object.fromEntries(Object.entries(meta).filter(([, v]) => v !== "" && v != null));
-  const { data, error } = await supabase
-    .from("resources")
-    .insert({ ...clean, ...fileFields, user_id: uid })
-    .select()
-    .single();
+  const { grade_level_id: _single, ...rest } = meta;
+  const clean = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== "" && v != null));
+  const rows = levels.map((grade_level_id) => ({ ...clean, grade_level_id, ...fileFields, user_id: uid }));
+  const { data, error } = await supabase.from("resources").insert(rows).select();
   // If the insert fails the R2 object stays orphaned (no row to reference it); a lifecycle rule can purge those.
   if (error) throw error;
   return data;

@@ -108,7 +108,7 @@ export default function TeacherDashboard() {
 
   // ── upload form ────────────────────────────────────────────────────────────
   const [form, setForm] = useState({
-    title: "", type: "lesson", subject_id: "", grade_level_id: "",
+    title: "", type: "lesson", subject_id: "", grade_level_ids: [],
     academic_year_id: "", semester: "الفصل الأول", description: "", file: null,
   });
 
@@ -199,8 +199,8 @@ export default function TeacherDashboard() {
   // ── upload resource ────────────────────────────────────────────────────────
   const handleUpload = async () => {
     const url = externalUrl.trim();
-    if (!form.title || !form.subject_id || !form.grade_level_id) {
-      showToast("يرجى ملء جميع الحقول المطلوبة", "error"); return;
+    if (!form.title || !form.subject_id || form.grade_level_ids.length === 0) {
+      showToast("يرجى ملء جميع الحقول المطلوبة واختيار مستوى واحد على الأقل", "error"); return;
     }
     if (sourceMode === "file" && !form.file) { showToast("حدّد الملف المراد رفعه", "error"); return; }
     if (sourceMode === "link" && !/^https:\/\/\S+$/i.test(url)) {
@@ -209,14 +209,16 @@ export default function TeacherDashboard() {
     setSub(true);
     setUploadPct(sourceMode === "file" ? 0 : null);
     try {
-      const { file, ...meta } = form;
+      const { file, grade_level_ids, ...meta } = form;
       await uploadResource(
         sourceMode === "file"
-          ? { file, meta, onProgress: setUploadPct }
-          : { externalUrl: url, meta }
+          ? { file, meta, gradeLevelIds: grade_level_ids, onProgress: setUploadPct }
+          : { externalUrl: url, meta, gradeLevelIds: grade_level_ids }
       );
-      showToast("✅ تم حفظ المورد بنجاح");
-      setForm(p => ({ ...p, title: "", description: "", file: null }));
+      showToast(grade_level_ids.length > 1
+        ? `✅ تم نشر المورد في ${grade_level_ids.length} مستويات`
+        : "✅ تم حفظ المورد بنجاح");
+      setForm(p => ({ ...p, title: "", description: "", file: null, grade_level_ids: [] }));
       setExternalUrl("");
       setActive("myresources");
     } catch (err) {
@@ -682,15 +684,40 @@ export default function TeacherDashboard() {
                       </div>
                     </div>
 
-                    {/* المستوى */}
-                    <div className="td-field">
-                      <label>المستوى الدراسي <span className="req">*</span></label>
-                      <div className="td-input-wrap">
-                        <i className="bi bi-mortarboard td-fi" />
-                        <select value={form.grade_level_id} onChange={e => setForm(p => ({ ...p, grade_level_id: e.target.value }))}>
-                          <option value="">-- اختر المستوى --</option>
-                          {gradeLevels.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                        </select>
+                    {/* المستويات (اختيار متعدد) */}
+                    <div className="td-field full">
+                      <label>
+                        المستويات الدراسية <span className="req">*</span>
+                        <span className="td-lvl-count">
+                          {form.grade_level_ids.length > 0 ? ` (${form.grade_level_ids.length} محدّد)` : ""}
+                        </span>
+                      </label>
+                      <div className="td-lvl-chips">
+                        {gradeLevels.map(l => {
+                          const on = form.grade_level_ids.includes(l.id);
+                          return (
+                            <button type="button" key={l.id}
+                              className={`td-lvl-chip ${on ? "on" : ""}`}
+                              aria-pressed={on}
+                              onClick={() => setForm(p => ({
+                                ...p,
+                                grade_level_ids: on
+                                  ? p.grade_level_ids.filter(x => x !== l.id)
+                                  : [...p.grade_level_ids, l.id],
+                              }))}>
+                              {on && <i className="bi bi-check2" />} {l.name}
+                            </button>
+                          );
+                        })}
+                        {gradeLevels.length > 1 && (
+                          <button type="button" className="td-lvl-chip all"
+                            onClick={() => setForm(p => ({
+                              ...p,
+                              grade_level_ids: p.grade_level_ids.length === gradeLevels.length ? [] : gradeLevels.map(l => l.id),
+                            }))}>
+                            {form.grade_level_ids.length === gradeLevels.length ? "إلغاء الكل" : "تحديد الكل"}
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -1351,6 +1378,16 @@ export default function TeacherDashboard() {
         .td-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 24px; }
         .td-field { display: flex; flex-direction: column; gap: 7px; }
         .td-field.full { grid-column: 1 / -1; }
+        .td-lvl-count { color: #6366f1; font-weight: 600; }
+        .td-lvl-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .td-lvl-chip {
+          padding: 7px 14px; border: 1.5px solid #e2e8f0; background: white; border-radius: 30px;
+          font-size: 0.8rem; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.2s;
+          font-family: inherit;
+        }
+        .td-lvl-chip:hover { border-color: #6366f1; color: #6366f1; }
+        .td-lvl-chip.on { background: #6366f1; border-color: #6366f1; color: white; }
+        .td-lvl-chip.all { border-style: dashed; }
         .td-field label { font-size: 0.82rem; font-weight: 700; color: #374151; }
         .req { color: #f43f5e; }
         .td-hint { font-size: 0.72rem; font-weight: 400; color: #94a3b8; }

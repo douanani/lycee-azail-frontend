@@ -159,18 +159,51 @@ export function AddResourceModal({
             </select>
           </div>
         </div>
-        <div className="form-field">
-          <label>المستوى *</label>
-          <div className="field-wrap">
-            <i className="bi bi-mortarboard field-icon"></i>
-            <select
-              value={resourceForm.grade_level_id}
-              onChange={e => setResForm({ ...resourceForm, grade_level_id: e.target.value })}
-            >
-              <option value="">-- اختر --</option>
-              {gradeLevels.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
+        <div className="form-field full">
+          <label>
+            المستويات *
+            {resourceForm.grade_level_ids.length > 0 && (
+              <span style={{ color: "#4f46e5", fontWeight: 600 }}> ({resourceForm.grade_level_ids.length} محدّد)</span>
+            )}
+          </label>
+          <div className="res-lvl-chips">
+            {gradeLevels.map(l => {
+              const on = resourceForm.grade_level_ids.includes(l.id);
+              return (
+                <button type="button" key={l.id}
+                  className={`res-lvl-chip ${on ? "on" : ""}`}
+                  aria-pressed={on}
+                  onClick={() => setResForm({
+                    ...resourceForm,
+                    grade_level_ids: on
+                      ? resourceForm.grade_level_ids.filter(x => x !== l.id)
+                      : [...resourceForm.grade_level_ids, l.id],
+                  })}>
+                  {on && <i className="bi bi-check2"></i>} {l.name}
+                </button>
+              );
+            })}
+            {gradeLevels.length > 1 && (
+              <button type="button" className="res-lvl-chip all"
+                onClick={() => setResForm({
+                  ...resourceForm,
+                  grade_level_ids: resourceForm.grade_level_ids.length === gradeLevels.length ? [] : gradeLevels.map(l => l.id),
+                })}>
+                {resourceForm.grade_level_ids.length === gradeLevels.length ? "إلغاء الكل" : "تحديد الكل"}
+              </button>
+            )}
           </div>
+          <style>{`
+            .res-lvl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+            .res-lvl-chip {
+              padding: 6px 14px; border: 1.5px solid #e2e8f0; background: white; border-radius: 30px;
+              font-size: 0.78rem; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.2s;
+              font-family: inherit;
+            }
+            .res-lvl-chip:hover { border-color: #4f46e5; color: #4f46e5; }
+            .res-lvl-chip.on { background: #4f46e5; border-color: #4f46e5; color: white; }
+            .res-lvl-chip.all { border-style: dashed; }
+          `}</style>
         </div>
         <div className="form-field">
           <label>السنة الدراسية</label>

@@ -69,7 +69,7 @@ export default function AdminDashboard() {
     title: "", body: "", audience: "all"
   });
   const [resourceForm, setResForm] = useState({
-    title: "", type: "lesson", subject_id: "", grade_level_id: "",
+    title: "", type: "lesson", subject_id: "", grade_level_ids: [],
     academic_year_id: "", semester: "الفصل الأول", file: null
   });
 
@@ -211,17 +211,19 @@ export default function AdminDashboard() {
   };
 
   const handleUploadResource = async () => {
-    if (!resourceForm.title || !resourceForm.subject_id || !resourceForm.grade_level_id || !resourceForm.file) {
-      showToast("يرجى ملء جميع الحقول وتحديد الملف", "error"); return;
+    if (!resourceForm.title || !resourceForm.subject_id || resourceForm.grade_level_ids.length === 0 || !resourceForm.file) {
+      showToast("يرجى ملء جميع الحقول واختيار مستوى واحد على الأقل وتحديد الملف", "error"); return;
     }
     setSubmitting(true);
     setUploadPct(0);
     try {
-      const { file, ...meta } = resourceForm;
-      await uploadResource({ file, meta, onProgress: setUploadPct });
-      showToast("تم رفع المورد بنجاح");
+      const { file, grade_level_ids, ...meta } = resourceForm;
+      await uploadResource({ file, meta, gradeLevelIds: grade_level_ids, onProgress: setUploadPct });
+      showToast(grade_level_ids.length > 1
+        ? `تم نشر المورد في ${grade_level_ids.length} مستويات`
+        : "تم رفع المورد بنجاح");
       setModal(null);
-      setResForm(p => ({ ...p, title: "", file: null }));
+      setResForm(p => ({ ...p, title: "", file: null, grade_level_ids: [] }));
       if (activeSection === "resources") fetchResources();
       fetchDashboard();
     } catch (err) {
