@@ -1,5 +1,5 @@
 import { fail, json, serveJson } from "../_shared/http.ts";
-import { requireUser } from "../_shared/auth.ts";
+import { adminClient, requireUser } from "../_shared/auth.ts";
 import { deleteObject } from "../_shared/r2.ts";
 
 serveJson(async (req, body) => {
@@ -15,10 +15,20 @@ serveJson(async (req, body) => {
   if (error) fail(500, "Delete failed");
   if (!deleted || deleted.length === 0) fail(403, "Forbidden");
 
-  // DB row is gone; now the R2 object. A failure here only leaves an orphan file.
+  // DB row is gone; now the R2 object. A resource published to several levels is one row per
+  // level sharing the same file_key, so only remove the object when NO other row still uses it.
+  // (service role: RLS would hide unpublished/other users' rows from the count)
   if (r!.file_key) {
     try {
-      await deleteObject(r!.file_key);
+      const { count, error: cErr } = await adminClient()
+        .from("resources")
+        .select("id", { count: "exact", head: true })
+        .eq("file_key", r!.file_key);
+      if (cErr || count === null) {
+        console.error("shared-file check failed, keeping R2 object", r!.file_key, cErr);
+      } else if (count === 0) {
+        await deleteObject(r!.file_key);
+      }
     } catch (e) {
       console.error("orphan R2 object", r!.file_key, e);
     }
