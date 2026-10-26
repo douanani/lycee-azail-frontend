@@ -5,6 +5,7 @@ import { SCHOOL_NAME } from "../Data/constants";
 import { BI } from "../Utils/icons";
 import { logout, getCurrentProfile } from "../api/services";
 import { getDashboardPath } from "../api/rolePaths";
+import { supabase } from "../api/supabase";
 
 function getInitials(name = "") {
   const parts = name.trim().split(/\s+/);
@@ -466,14 +467,25 @@ export default function Navbar() {
     return () => window.removeEventListener("storage", sync);
   }, [location]);
 
-    useEffect(() => {
+  // Verify the stored session ONCE on mount (clears a stale auth_user, e.g. account deactivated or token revoked),
+  // then react to auth events instead of hitting the DB on every route change.
+  useEffect(() => {
+    let alive = true;
     getCurrentProfile().then((p) => {
-      if (!p) {
+      if (alive && !p) {
         try { localStorage.removeItem("auth_user"); } catch {}
         setUser(null);
       }
     });
-  }, [location.pathname]);
+    // Keep this callback synchronous: awaiting supabase calls inside it can deadlock supabase-js.
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        try { localStorage.removeItem("auth_user"); } catch {}
+        setUser(null);
+      }
+    });
+    return () => { alive = false; sub.subscription.unsubscribe(); };
+  }, []);
 
   useEffect(() => {
     setDropdownOpen(false);
