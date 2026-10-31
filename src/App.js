@@ -9,6 +9,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react"
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { PageSkeleton } from "./components/Skeleton";
+import ErrorBoundary from "./components/ErrorBoundary";
 import HomePage from "./Pages/HomePage";
 import LessonsPage from "./Pages/LessonsPage";
 import ActivitiesPage from "./Pages/ActivitiesPage";
@@ -92,6 +93,7 @@ function AnimatedRoutes() {
         animate="animate"
         exit="exit"
       >
+        <ErrorBoundary resetKey={location.pathname}>
         <Suspense fallback={<RouteFallback />}>
         <Routes location={location}>
           <Route path="/" element={<HomePage />} />
@@ -111,6 +113,7 @@ function AnimatedRoutes() {
           <Route path="*" element={<HomePage />} />
         </Routes>
         </Suspense>
+        </ErrorBoundary>
       </motion.div>
     </AnimatePresence>
   );

@@ -1,0 +1,35 @@
+/* Confirm dialog + toast (components/Feedback.js). z-index sits above dashboard modals (1000) and toasts (9999). */
+.fb-overlay {
+  position: fixed; inset: 0; z-index: 10000; background: rgba(15, 23, 42, .55);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  animation: fb-fade .15s ease-out;
+}
+.fb-dialog {
+  background: #fff; width: min(420px, 100%); border-radius: 18px; padding: 24px 22px 18px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .35); text-align: center; animation: fb-pop .18s ease-out;
+}
+.fb-icon { width: 54px; height: 54px; border-radius: 50%; margin: 0 auto 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; background: #eef2ff; color: #4f46e5; }
+.fb-dialog.danger .fb-icon { background: #fee2e2; color: #dc2626; }
+.fb-title { font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 0 0 6px; }
+.fb-msg { color: #475569; font-size: .93rem; line-height: 1.8; margin: 0 0 20px; overflow-wrap: anywhere; }
+.fb-actions { display: flex; gap: 10px; }
+.fb-btn { flex: 1; border: 0; border-radius: 12px; padding: 11px 14px; font: inherit; font-weight: 700; cursor: pointer; transition: filter .15s, transform .15s; }
+.fb-btn:hover { filter: brightness(.95); }
+.fb-btn:active { transform: scale(.98); }
+.fb-btn.cancel { background: #f1f5f9; color: #334155; }
+.fb-btn.ok { background: #4f46e5; color: #fff; }
+.fb-dialog.danger .fb-btn.ok { background: #dc2626; }
+.fb-btn:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+
+.fb-toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10001;
+  max-width: calc(100vw - 32px); padding: 12px 18px; border-radius: 12px; color: #fff; font-weight: 600; font-size: .92rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .25); animation: fb-toast-in .2s ease-out;
+}
+.fb-toast.success { background: #059669; }
+.fb-toast.error { background: #dc2626; }
+
+@keyframes fb-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fb-pop { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes fb-toast-in { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .fb-overlay, .fb-dialog, .fb-toast { animation: none; } }

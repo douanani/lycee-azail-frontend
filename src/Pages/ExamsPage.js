@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "../components/PageHeader";
 import { ExamsSkeleton } from "../components/Skeleton";
+import { useToast } from "../components/Feedback";
 import { getGradeLevels, getResources, downloadResource } from "../api/services";
 
 const fmtSize = (b) => {
@@ -68,6 +69,7 @@ const staggerItem = {
 };
 
 export default function ExamsPage() {
+  const [toast, toastEl] = useToast();
   const [exams, setExams] = useState({});
   const [meta, setMeta] = useState({});
   const [status, setStatus] = useState("loading"); // loading | ready | error
@@ -502,7 +504,7 @@ export default function ExamsPage() {
                             <motion.button
                               type="button"
                               className="download-btn"
-                              onClick={() => downloadResource(file.id).catch(() => alert("تعذّر تحميل الملف"))}
+                              onClick={() => downloadResource(file.id).catch(() => toast("تعذّر تحميل الملف", "error"))}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
@@ -1045,6 +1047,7 @@ export default function ExamsPage() {
           }
         }
       `}</style>
+      {toastEl}
     </motion.div>
   );
 }

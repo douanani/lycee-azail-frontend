@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Skeleton } from "../Admin Dashboard/adminUtils";
 import * as svc from "../../api/services";
 import AdminModal from "./AdminModal";
+import { useConfirm } from "../../components/Feedback";
 
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.05 } } };
 const fadeUp  = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } };
@@ -20,6 +21,7 @@ const TABS = [
 const STREAM_LABEL = { sciences: "علمي", literature: "أدبي", common: "جذع مشترك", technology: "تكنولوجي" };
 
 export default function SettingsSection({ showToast }) {
+  const [confirm, confirmDialog] = useConfirm();
   const [tab, setTab] = useState("years");
   const [modal, setModal] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -132,7 +134,7 @@ export default function SettingsSection({ showToast }) {
   };
 
   const deleteLevel = async (level) => {
-    if (!window.confirm(`حذف "${level.name}"؟`)) return;
+    if (!(await confirm({ title: "حذف مستوى", message: `حذف "${level.name}"؟` }))) return;
     try {
       await svc.deleteGradeLevel(level.id);
       showToast("تم الحذف");
@@ -176,7 +178,7 @@ export default function SettingsSection({ showToast }) {
   };
 
   const deleteSubject = async (subject) => {
-    if (!window.confirm(`حذف "${subject.name}"؟`)) return;
+    if (!(await confirm({ title: "حذف مادة", message: `حذف "${subject.name}"؟` }))) return;
     try {
       await svc.deleteSubject(subject.id);
       showToast("تم الحذف");
@@ -210,7 +212,7 @@ export default function SettingsSection({ showToast }) {
   };
 
   const deleteClassroom = async (cls) => {
-    if (!window.confirm(`حذف "${cls.name}"؟`)) return;
+    if (!(await confirm({ title: "حذف قسم", message: `حذف "${cls.name}"؟` }))) return;
     try {
       await svc.deleteClassroom(cls.id);
       showToast("تم الحذف");
@@ -653,6 +655,7 @@ export default function SettingsSection({ showToast }) {
         }
         .chip.active { background: #4f46e5; color: white; border-color: #4f46e5; }
       `}</style>
+      {confirmDialog}
     </motion.div>
   );
 }

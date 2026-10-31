@@ -11,6 +11,7 @@ import {
 } from "../../api/services";
 import useAuthGuard from "../../api/useAuthGuard";
 import { DashboardSkeleton } from "../../components/Skeleton";
+import { useConfirm } from "../../components/Feedback";
 import MobileDashNav, { useTableLabels } from "../MobileDashNav";
 
 // ─── Layout components ─────────────────────────────────────────────────────────
@@ -35,6 +36,7 @@ import { motion } from "framer-motion";
 export default function AdminDashboard() {
   const adminUser = useAuthGuard(["admin"]);
   useTableLabels(); // must stay above the early return (hook order)
+  const [confirm, confirmDialog] = useConfirm();
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState("overview");
@@ -174,7 +176,7 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteUser = async (user) => {
-    if (!window.confirm(`هل تريد حذف ${user.name}؟`)) return;
+    if (!(await confirm({ title: "حذف مستخدم", message: `هل تريد حذف ${user.name}؟` }))) return;
     try {
       await deleteUser(user.id);
       showToast("تم حذف المستخدم بنجاح");
@@ -203,7 +205,7 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteAnnouncement = async (id) => {
-    if (!window.confirm("تأكيد حذف الإعلان؟")) return;
+    if (!(await confirm({ title: "حذف إعلان", message: "تأكيد حذف الإعلان؟" }))) return;
     try {
       await deleteAnnouncement(id);
       showToast("تم حذف الإعلان");
@@ -233,7 +235,7 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteResource = async (id) => {
-    if (!window.confirm("تأكيد الحذف؟")) return;
+    if (!(await confirm({ title: "حذف مورد", message: "تأكيد حذف هذا المورد؟" }))) return;
     try {
       await deleteResource(id);
       showToast("تم الحذف بنجاح");
@@ -361,6 +363,8 @@ export default function AdminDashboard() {
         subjects={subjects}
         academicYears={academicYears}
       />
+
+      {confirmDialog}
 
       {/* ── Mobile bottom nav (sidebar is hidden <=991px) ── */}
       <MobileDashNav

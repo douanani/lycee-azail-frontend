@@ -10,6 +10,7 @@ import {
 } from "../api/services";
 import useAuthGuard from "../api/useAuthGuard";
 import { DashboardSkeleton } from "../components/Skeleton";
+import { useConfirm } from "../components/Feedback";
 import { getPushState, enablePush, disablePush } from "../api/push";
 import MobileDashNav, { useTableLabels } from "./MobileDashNav";
 
@@ -90,6 +91,7 @@ export default function TeacherDashboard() {
   // ── auth user ──────────────────────────────────────────────────────────────
   const teacher = useAuthGuard(["teacher", "admin"]);
   useTableLabels();
+  const [confirm, confirmDialog] = useConfirm();
 
   // ── UI ─────────────────────────────────────────────────────────────────────
   const [active, setActive]       = useState("overview");
@@ -295,7 +297,7 @@ export default function TeacherDashboard() {
 
   // ── delete resource ────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
-    if (!window.confirm("تأكيد حذف هذا الملف؟")) return;
+    if (!(await confirm({ message: "تأكيد حذف هذا الملف؟" }))) return;
     try {
       await deleteResource(id);
       showToast("تم حذف الملف بنجاح");
@@ -976,6 +978,8 @@ export default function TeacherDashboard() {
           </>
         )}
       </Modal>
+
+      {confirmDialog}
 
       {/* ── Edit resource Modal ── */}
       <Modal show={modal?.type === "edit" && !!editForm} onClose={() => setModal(null)} title="تعديل المورد">

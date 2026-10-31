@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthGuard from "../api/useAuthGuard";
 import { ListSkeleton, DashboardSkeleton } from "../components/Skeleton";
+import { useConfirm } from "../components/Feedback";
 import { getAnnouncements, createAnnouncement, deleteAnnouncement, logout, errMsg } from "../api/services";
 
 const ROLE_LABEL = { counselor: "مستشار التوجيه", admin_staff: "الإدارة", supervisor: "مستشار التربية" };
@@ -19,6 +20,7 @@ const ALLOWED_AUDIENCES = {
 export default function StaffDashboard({ role }) {
   const navigate = useNavigate();
   const profile = useAuthGuard([role]);
+  const [confirm, confirmDialog] = useConfirm();
   const audiences = ALLOWED_AUDIENCES[role] || [];
 
   const [items, setItems] = useState([]);
@@ -52,7 +54,7 @@ export default function StaffDashboard({ role }) {
   };
 
   const remove = async (id) => {
-    if (!window.confirm("حذف هذا الإعلان؟")) return;
+    if (!(await confirm({ message: "حذف هذا الإعلان؟" }))) return;
     try { await deleteAnnouncement(id); load(); }
     catch (err) { setMsg({ type: "danger", text: errMsg(err, "فشل الحذف") }); }
   };
@@ -117,6 +119,7 @@ export default function StaffDashboard({ role }) {
             <p className="mb-0 mt-2" style={{ whiteSpace: "pre-wrap" }}>{a.body}</p>
           </div>
         ))}
+      {confirmDialog}
     </div>
   );
 }
