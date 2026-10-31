@@ -1,4 +1,5 @@
 // App.js
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Analytics } from "@vercel/analytics/react";
@@ -13,15 +14,49 @@ import ActivitiesPage from "./Pages/ActivitiesPage";
 import TimetablePage from "./Pages/TimetablePage";
 import ContactPage from "./Pages/ContactPage";
 import ExamsPage from "./Pages/ExamsPage";
-import AuthPage from "./Pages/Authpage";
-import AdminDashboard from "./Pages/Admin Dashboard/AdminDashboard";
-import TeacherDashboard from "./Pages/TeacherDashboard";
-import StaffDashboard from "./Pages/StaffDashboard";
-import AccountPage from "./Pages/AccountPage";
+
+import "./Styles/global.css";
+
+
+// Staff-only screens are split into their own chunks so students on phones never download them
+// (the dashboards carry large inline stylesheets + admin-only libraries).
+// After a new deploy, a cached index.html may point at chunk files that no longer exist:
+// reload once to pick up the fresh build instead of showing a blank page.
+const lazyRetry = (factory) =>
+  lazy(() =>
+    factory()
+      .then((m) => {
+        try { sessionStorage.removeItem("chunk-reload"); } catch (_) {}
+        return m;
+      })
+      .catch((err) => {
+      const key = "chunk-reload";
+      try {
+        if (!sessionStorage.getItem(key)) {
+          sessionStorage.setItem(key, "1");
+          window.location.reload();
+          return new Promise(() => {}); // keep Suspense pending while the page reloads
+        }
+        sessionStorage.removeItem(key);
+      } catch (_) {}
+      throw err;
+    })
+  );
+
+const AuthPage         = lazyRetry(() => import("./Pages/Authpage"));
+const AdminDashboard   = lazyRetry(() => import("./Pages/Admin Dashboard/AdminDashboard"));
+const TeacherDashboard = lazyRetry(() => import("./Pages/TeacherDashboard"));
+const StaffDashboard   = lazyRetry(() => import("./Pages/StaffDashboard"));
+const AccountPage      = lazyRetry(() => import("./Pages/AccountPage"));
+
+const RouteFallback = () => (
+  <div className="d-flex justify-content-center align-items-center py-5" style={{ minHeight: "60vh" }} role="status" aria-label="جاري التحميل">
+    <div className="spinner-border text-primary" />
+  </div>
+);
 
 
 // Import global styles
-import "./Styles/global.css";
 
 // Import Bootstrap JS dynamically
 if (typeof window !== "undefined") {
@@ -63,6 +98,7 @@ function AnimatedRoutes() {
         animate="animate"
         exit="exit"
       >
+        <Suspense fallback={<RouteFallback />}>
         <Routes location={location}>
           <Route path="/" element={<HomePage />} />
           <Route path="/lessons" element={<LessonsPage />} />
@@ -80,6 +116,7 @@ function AnimatedRoutes() {
           {/* Fallback */}
           <Route path="*" element={<HomePage />} />
         </Routes>
+        </Suspense>
       </motion.div>
     </AnimatePresence>
   );

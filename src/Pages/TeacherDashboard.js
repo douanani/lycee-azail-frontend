@@ -9,6 +9,7 @@ import {
   logout, errMsg,
 } from "../api/services";
 import useAuthGuard from "../api/useAuthGuard";
+import { getPushState, enablePush, disablePush } from "../api/push";
 import MobileDashNav, { useTableLabels } from "./MobileDashNav";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -116,6 +117,8 @@ export default function TeacherDashboard() {
   const [sourceMode, setSourceMode] = useState("file");
   const [externalUrl, setExternalUrl] = useState("");
   const [uploadPct, setUploadPct]     = useState(null);
+  const [pushState, setPushState]     = useState("unsupported");
+  const [pushBusy, setPushBusy]       = useState(false);
   const [editForm, setEditForm]       = useState(null);
 
   // ── filters ────────────────────────────────────────────────────────────────
@@ -183,6 +186,24 @@ export default function TeacherDashboard() {
     fetchFormData();
     fetchNotifications();
   }, [fetchFormData, fetchNotifications]);
+
+  // Phone push status (re-read whenever the notifications modal opens)
+  useEffect(() => {
+    if (modal?.type === "notifications") getPushState().then(setPushState).catch(() => {});
+  }, [modal]);
+
+  const togglePush = async () => {
+    setPushBusy(true);
+    try {
+      if (pushState === "enabled") await disablePush();
+      else await enablePush();
+      setPushState(await getPushState());
+      showToast(pushState === "enabled" ? "تم إيقاف إشعارات الهاتف" : "تم تفعيل إشعارات الهاتف");
+    } catch (err) {
+      showToast(errMsg(err, "تعذر تغيير إعداد الإشعارات"), "error");
+      setPushState(await getPushState());
+    } finally { setPushBusy(false); }
+  };
 
   // Refresh the bell every minute and whenever the tab becomes visible again.
   useEffect(() => {
@@ -904,6 +925,27 @@ export default function TeacherDashboard() {
 
       {/* ── Notifications Modal ── */}
       <Modal show={modal?.type === "notifications"} onClose={() => setModal(null)} title="الإشعارات">
+        {(pushState === "enabled" || pushState === "disabled") && (
+          <div className="td-push-box">
+            <div>
+              <strong><i className="bi bi-phone-vibrate-fill me-1" />إشعارات الهاتف</strong>
+              <span>{pushState === "enabled" ? "مفعّلة على هذا الجهاز" : "استقبل الإعلانات على هاتفك حتى والموقع مغلق"}</span>
+            </div>
+            <button className={`td-push-btn ${pushState === "enabled" ? "off" : ""}`} onClick={togglePush} disabled={pushBusy}>
+              {pushBusy ? "..." : pushState === "enabled" ? "إيقاف" : "تفعيل"}
+            </button>
+          </div>
+        )}
+        {pushState === "ios-install" && (
+          <div className="td-push-box hint">
+            لتفعيل إشعارات الهاتف على iPhone: افتح الموقع في Safari، اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»، وافتحه من هناك.
+          </div>
+        )}
+        {pushState === "denied" && (
+          <div className="td-push-box hint">
+            الإشعارات محظورة لهذا الموقع. فعّلها من إعدادات المتصفح (أيقونة القفل بجانب العنوان) ثم أعد المحاولة.
+          </div>
+        )}
         {notifications.length === 0 ? (
           <div className="td-empty" style={{ minHeight: 160 }}>
             <i className="bi bi-bell-slash" />
@@ -1331,6 +1373,19 @@ export default function TeacherDashboard() {
         .td-card-btn:hover { filter: brightness(0.9); transform: scale(1.03); }
         .td-card-btn.edit { background: #fffbeb; color: #d97706; max-width: 36px; flex: 0; }
         .td-card-btn.pub  { background: #ecfdf5; color: #059669; max-width: 36px; flex: 0; }
+        .td-push-box {
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+          background: #eef2ff; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: .85rem; color: #3730a3;
+        }
+        .td-push-box div { display: flex; flex-direction: column; gap: 2px; }
+        .td-push-box span { color: #6366f1; font-size: .78rem; }
+        .td-push-box.hint { display: block; background: #fffbeb; color: #92400e; line-height: 1.8; }
+        .td-push-btn {
+          border: 0; border-radius: 10px; padding: 8px 16px; font-weight: 700; font-family: inherit; cursor: pointer;
+          background: #6366f1; color: #fff; flex-shrink: 0;
+        }
+        .td-push-btn.off { background: #fff; color: #6366f1; border: 1.5px solid #c7d2fe; }
+        .td-push-btn:disabled { opacity: .6; cursor: not-allowed; }
         .td-draft-pill {
           display: inline-block; margin-inline-start: 8px; padding: 2px 9px; border-radius: 999px;
           font-size: .68rem; font-weight: 700; background: #fef3c7; color: #b45309; vertical-align: middle;
