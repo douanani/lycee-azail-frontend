@@ -8,6 +8,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react"
 // Import Components
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import { PageSkeleton } from "./components/Skeleton";
 import HomePage from "./Pages/HomePage";
 import LessonsPage from "./Pages/LessonsPage";
 import ActivitiesPage from "./Pages/ActivitiesPage";
@@ -15,8 +16,20 @@ import TimetablePage from "./Pages/TimetablePage";
 import ContactPage from "./Pages/ContactPage";
 import ExamsPage from "./Pages/ExamsPage";
 
+// Import global styles
 import "./Styles/global.css";
 
+// Import Bootstrap JS dynamically
+if (typeof window !== "undefined") {
+  import("bootstrap/dist/js/bootstrap.bundle.min.js");
+}
+
+// Add Bootstrap Icons CSS
+const bootstrapIconsLink = document.createElement("link");
+bootstrapIconsLink.rel = "stylesheet";
+bootstrapIconsLink.href =
+  "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css";
+document.head.appendChild(bootstrapIconsLink);
 
 // Staff-only screens are split into their own chunks so students on phones never download them
 // (the dashboards carry large inline stylesheets + admin-only libraries).
@@ -49,26 +62,7 @@ const TeacherDashboard = lazyRetry(() => import("./Pages/TeacherDashboard"));
 const StaffDashboard   = lazyRetry(() => import("./Pages/StaffDashboard"));
 const AccountPage      = lazyRetry(() => import("./Pages/AccountPage"));
 
-const RouteFallback = () => (
-  <div className="d-flex justify-content-center align-items-center py-5" style={{ minHeight: "60vh" }} role="status" aria-label="جاري التحميل">
-    <div className="spinner-border text-primary" />
-  </div>
-);
-
-
-// Import global styles
-
-// Import Bootstrap JS dynamically
-if (typeof window !== "undefined") {
-  import("bootstrap/dist/js/bootstrap.bundle.min.js");
-}
-
-// Add Bootstrap Icons CSS
-const bootstrapIconsLink = document.createElement("link");
-bootstrapIconsLink.rel = "stylesheet";
-bootstrapIconsLink.href =
-  "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css";
-document.head.appendChild(bootstrapIconsLink);
+const RouteFallback = PageSkeleton;
 
 // Page transition variants
 const pageVariants = {

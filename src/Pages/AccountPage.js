@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthGuard from "../api/useAuthGuard";
+import { FormSkeleton } from "../components/Skeleton";
 import { changePassword, errMsg } from "../api/services";
 import { getDashboardPath } from "../api/rolePaths";
 import { roleConfig } from "./Admin Dashboard/adminUtils";
@@ -13,7 +14,7 @@ export default function AccountPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
 
-  if (!profile) return null;
+  if (!profile) return <div className="container py-5" dir="rtl" style={{ maxWidth: 520 }}><FormSkeleton /></div>;
 
   const submit = async (e) => {
     e.preventDefault();

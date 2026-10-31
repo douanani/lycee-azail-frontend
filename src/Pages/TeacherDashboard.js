@@ -9,6 +9,7 @@ import {
   logout, errMsg,
 } from "../api/services";
 import useAuthGuard from "../api/useAuthGuard";
+import { DashboardSkeleton } from "../components/Skeleton";
 import { getPushState, enablePush, disablePush } from "../api/push";
 import MobileDashNav, { useTableLabels } from "./MobileDashNav";
 
@@ -330,7 +331,7 @@ export default function TeacherDashboard() {
 
   const unreadCount = notifications.length;
 
-  if (!teacher) return null; // auth guard is checking / redirecting
+  if (!teacher) return <DashboardSkeleton />; // auth guard is checking / redirecting
 
   return (
     <div className="td-root" dir="rtl">

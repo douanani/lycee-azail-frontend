@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "../components/PageHeader";
+import { ExamsSkeleton } from "../components/Skeleton";
 import { getGradeLevels, getResources, downloadResource } from "../api/services";
 
 const fmtSize = (b) => {
@@ -137,11 +138,14 @@ export default function ExamsPage() {
     return (
       <div>
         <PageHeader icon="bi-pencil-square" title="الاختبارات والفروض" sub="نماذج الاختبارات والفروض" />
-        <div className="container py-5 text-center text-muted" dir="rtl">
-          {status === "loading" && "جارٍ التحميل..."}
-          {status === "error" && "تعذّر تحميل البيانات. حاول مرة أخرى لاحقاً."}
-          {status === "ready" && "لا توجد بيانات."}
-        </div>
+        {status === "loading" ? (
+          <div className="container py-4" dir="rtl"><ExamsSkeleton /></div>
+        ) : (
+          <div className="container py-5 text-center text-muted" dir="rtl">
+            {status === "error" && "تعذّر تحميل البيانات. حاول مرة أخرى لاحقاً."}
+            {status === "ready" && "لا توجد بيانات."}
+          </div>
+        )}
       </div>
     );
   }

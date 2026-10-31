@@ -10,6 +10,7 @@ import {
   getGradeLevels, getSubjects, getAcademicYears, errMsg,
 } from "../../api/services";
 import useAuthGuard from "../../api/useAuthGuard";
+import { DashboardSkeleton } from "../../components/Skeleton";
 import MobileDashNav, { useTableLabels } from "../MobileDashNav";
 
 // ─── Layout components ─────────────────────────────────────────────────────────
@@ -241,7 +242,7 @@ export default function AdminDashboard() {
     } catch (err) { showToast(errMsg(err, "فشل الحذف"), "error"); }
   };
 
-  if (!adminUser) return null; // guard is checking the session / redirecting
+  if (!adminUser) return <DashboardSkeleton />; // guard is checking the session / redirecting
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (

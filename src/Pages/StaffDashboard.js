@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthGuard from "../api/useAuthGuard";
+import { ListSkeleton, DashboardSkeleton } from "../components/Skeleton";
 import { getAnnouncements, createAnnouncement, deleteAnnouncement, logout, errMsg } from "../api/services";
 
 const ROLE_LABEL = { counselor: "مستشار التوجيه", admin_staff: "الإدارة", supervisor: "مستشار التربية" };
@@ -34,7 +35,7 @@ export default function StaffDashboard({ role }) {
 
   useEffect(() => { if (profile) load(); }, [profile, load]);
 
-  if (!profile) return null;
+  if (!profile) return <DashboardSkeleton />;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -96,7 +97,7 @@ export default function StaffDashboard({ role }) {
       </form>
 
       <h5 className="mb-3">الإعلانات</h5>
-      {loading ? <p className="text-muted">جاري التحميل...</p>
+      {loading ? <ListSkeleton rows={3} />
         : items.length === 0 ? <p className="text-muted">لا توجد إعلانات.</p>
         : items.map((a) => (
           <div key={a.id} className="card card-body mb-2">

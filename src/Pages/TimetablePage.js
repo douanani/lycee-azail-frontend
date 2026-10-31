@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "../components/PageHeader";
+import { TimetableSkeleton } from "../components/Skeleton";
 import { HOURS, DAYS } from "../Data/constants";
 import { getTimetableOverview } from "../api/services";
 
@@ -129,11 +130,14 @@ export default function TimetablePage() {
     return (
       <div>
         <PageHeader icon="bi-calendar-week" title="استعمال الزمن" sub="جداول دراسية منظمة لجميع الأقسام" />
-        <div className="container py-5 text-center text-muted" dir="rtl">
-          {status === "loading" && "جارٍ التحميل..."}
-          {status === "error" && "تعذّر تحميل الجداول. حاول مرة أخرى لاحقاً."}
-          {status === "ready" && "لم يتم نشر أي جدول بعد."}
-        </div>
+        {status === "loading" ? (
+          <div className="container py-4" dir="rtl"><TimetableSkeleton /></div>
+        ) : (
+          <div className="container py-5 text-center text-muted" dir="rtl">
+            {status === "error" && "تعذّر تحميل الجداول. حاول مرة أخرى لاحقاً."}
+            {status === "ready" && "لم يتم نشر أي جدول بعد."}
+          </div>
+        )}
       </div>
     );
   }
