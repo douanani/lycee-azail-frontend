@@ -16,6 +16,7 @@ import ActivitiesPage from "./Pages/ActivitiesPage";
 import TimetablePage from "./Pages/TimetablePage";
 import ContactPage from "./Pages/ContactPage";
 import ExamsPage from "./Pages/ExamsPage";
+import RoleRedirect from "./api/RoleRedirect";
 
 // Import global styles
 import "./Styles/global.css";
@@ -96,7 +97,7 @@ function AnimatedRoutes() {
         <ErrorBoundary resetKey={location.pathname}>
         <Suspense fallback={<RouteFallback />}>
         <Routes location={location}>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<RoleRedirect><HomePage /></RoleRedirect>} />
           <Route path="/lessons" element={<LessonsPage />} />
           <Route path="/activities" element={<ActivitiesPage />} />
           <Route path="/timetable" element={<TimetablePage />} />

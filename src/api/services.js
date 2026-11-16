@@ -95,6 +95,7 @@ export async function logout() {
     try {
       localStorage.removeItem("auth_user");
       localStorage.removeItem("auth_token");
+      sessionStorage.removeItem("entry-redirect-done");
     } catch (_) {}
   }
 }
